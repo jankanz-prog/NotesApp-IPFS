@@ -65,17 +65,22 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { emailOrUsername, password } = req.body;
 
     // Validation
-    if (!email || !password) {
-      res.status(400).json({ error: 'Email and password are required' });
+    if (!emailOrUsername || !password) {
+      res.status(400).json({ error: 'Email/Username and password are required' });
       return;
     }
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Find user by email or username
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: emailOrUsername },
+          { username: emailOrUsername },
+        ],
+      },
     });
 
     if (!user) {

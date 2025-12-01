@@ -33,7 +33,7 @@ Features include rich-text notes, drawing canvas, IPFS pinning, and Cardano wall
 project-root/
 │
 ├── frontend/                # Next.js + React
-│   ├── app/                 # Pages (App Router)
+│   ├── app/                 # Pages (App Router, login, register, landing page, notes)
 │   │   ├── (auth)/          # login, register
 │   │   ├── (dashboard)/     # notes, wallet, settings
 │   │   └── layout.tsx
