@@ -27,6 +27,7 @@ Features include rich-text notes, drawing canvas, IPFS pinning, and Cardano wall
 - Cardano wallet integration
 
 ---
+<img width="646" height="533" alt="image" src="https://github.com/user-attachments/assets/f1606a7b-1f2e-4ecd-be3d-df4026a823d3" />
 
 ## 📂 Project Structure
 
