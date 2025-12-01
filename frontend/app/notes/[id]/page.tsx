@@ -15,7 +15,7 @@ export default function NoteEditorPage() {
   const params = useParams();
   const noteId = params.id as string;
   
-  const { user, initializeAuth } = useAuthStore();
+  const { user, initializeAuth, isInitialized } = useAuthStore();
   const { fetchNoteById, updateNote, deleteNote, toggleFavorite, currentNote, isLoading } = useNotesStore();
   
   const [title, setTitle] = useState('');
@@ -29,6 +29,9 @@ export default function NoteEditorPage() {
   }, [initializeAuth]);
 
   useEffect(() => {
+    // Wait for auth initialization before redirecting
+    if (!isInitialized) return;
+    
     if (!user) {
       router.push('/login');
       return;
@@ -36,7 +39,7 @@ export default function NoteEditorPage() {
     if (noteId) {
       fetchNoteById(noteId);
     }
-  }, [user, noteId, router, fetchNoteById]);
+  }, [user, noteId, router, fetchNoteById, isInitialized]);
 
   useEffect(() => {
     if (currentNote) {
@@ -68,9 +71,12 @@ export default function NoteEditorPage() {
     await toggleFavorite(noteId);
   };
 
-  if (!user || isLoading) {
+  // Show loading while initializing auth
+  if (!isInitialized || isLoading) {
     return <div className="min-h-screen flex items-center justify-center text-gray-900">Loading...</div>;
   }
+
+  if (!user) return null;
 
   if (!currentNote) {
     return <div className="min-h-screen flex items-center justify-center text-gray-900">Note not found</div>;

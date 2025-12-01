@@ -4,6 +4,7 @@ import api from '@/lib/api';
 export interface Note {
   id: string;
   userId: string;
+  folderId?: string | null;
   title: string;
   content: string;
   drawing?: string | null;

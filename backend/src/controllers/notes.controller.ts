@@ -4,7 +4,7 @@ import prisma from '../db';
 export const createNote = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;
-    const { title, content, drawing, color, importance, favorite } = req.body;
+    const { title, content, drawing, color, importance, favorite, folderId } = req.body;
 
     if (!title) {
       res.status(400).json({ error: 'Title is required' });
@@ -14,6 +14,7 @@ export const createNote = async (req: Request, res: Response): Promise<void> => 
     const note = await prisma.note.create({
       data: {
         userId,
+        folderId: folderId || null, // null means default folder
         title,
         content: content || '',
         drawing,

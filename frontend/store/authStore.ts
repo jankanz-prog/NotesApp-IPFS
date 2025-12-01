@@ -13,6 +13,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  isInitialized: boolean;
   error: string | null;
   
   // Actions
@@ -27,6 +28,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
   isLoading: false,
+  isInitialized: false,
   error: null,
 
   login: async (emailOrUsername: string, password: string) => {
@@ -84,17 +86,26 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   initializeAuth: () => {
+    // Only run on client side
+    if (typeof window === 'undefined') {
+      set({ isInitialized: true });
+      return;
+    }
+
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
     
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
-        set({ token, user });
+        set({ token, user, isInitialized: true });
       } catch (error) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        set({ isInitialized: true });
       }
+    } else {
+      set({ isInitialized: true });
     }
   },
 }));
