@@ -27,33 +27,11 @@ Features include rich-text notes, drawing canvas, IPFS pinning, and Cardano wall
 - Cardano wallet integration
 
 ---
-<img width="646" height="533" alt="image" src="https://github.com/user-attachments/assets/f1606a7b-1f2e-4ecd-be3d-df4026a823d3" />
 
 ## 📂 Project Structure
 
-project-root/
-├── frontend/ -------------------- # Next.js + React (Client)
-│   ├── app/ --------------------- # Pages (App Router)
-│   │   ├── (auth)/ -------------- # login, register routes
-│   │   ├── (dashboard)/ --------- # notes, wallet, settings routes
-│   │   └── layout.tsx
-│   ├── components/ -------------- # Reusable React components
-│   ├── lib/ --------------------- # Frontend helper functions
-│   ├── styles/ ------------------ # Tailwind CSS globals
-│   └── package.json
-│
-├── backend/ --------------------- # Node.js + Express/NestJS (Server)
-│   ├── src/ 
-│   │   ├── controllers/ --------- # API route handlers
-│   │   ├── services/ ------------ # Business logic
-│   │   ├── routes/ -------------- # Express route definitions
-│   │   └── db.ts ---------------- # Prisma client initialization
-│   ├── prisma/ 
-│   │   └── schema.prisma -------- # Database schema
-│   └── package.json
-│
-├── .gitignore
-└── README.md
+<img width="613" height="485" alt="image" src="https://github.com/user-attachments/assets/4b1c378c-369e-4b37-81b6-86835887068c" />
+
 ---
 
 ## 📝 Features
