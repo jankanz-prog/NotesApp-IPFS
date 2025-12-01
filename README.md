@@ -28,33 +28,31 @@ Features include rich-text notes, drawing canvas, IPFS pinning, and Cardano wall
 
 ---
 
-## 📂 Project Structure (Option 1)
+## 📂 Project Structure
 
 project-root/
-│
-├── frontend/                # Next.js + React
-│   ├── app/                 # Pages (App Router, login, register, landing page, notes)
-│   │   ├── (auth)/          # login, register
-│   │   ├── (dashboard)/     # notes, wallet, settings
+├── frontend/ -------------------- # Next.js + React (Client)
+│   ├── app/ --------------------- # Pages (App Router)
+│   │   ├── (auth)/ -------------- # login, register routes
+│   │   ├── (dashboard)/ --------- # notes, wallet, settings routes
 │   │   └── layout.tsx
-│   ├── components/          # React components
-│   ├── lib/                 # frontend helper functions
-│   ├── styles/              # Tailwind globals
+│   ├── components/ -------------- # Reusable React components
+│   ├── lib/ --------------------- # Frontend helper functions
+│   ├── styles/ ------------------ # Tailwind CSS globals
 │   └── package.json
 │
-├── backend/                 # Node.js + Express/NestJS
-│   ├── src/
-│   │   ├── controllers/     # API route handlers
-│   │   ├── services/        # business logic
-│   │   ├── routes/          # express routes
-│   │   └── db.ts            # Prisma client
-│   ├── prisma/
-│   │   └── schema.prisma
+├── backend/ --------------------- # Node.js + Express/NestJS (Server)
+│   ├── src/ 
+│   │   ├── controllers/ --------- # API route handlers
+│   │   ├── services/ ------------ # Business logic
+│   │   ├── routes/ -------------- # Express route definitions
+│   │   └── db.ts ---------------- # Prisma client initialization
+│   ├── prisma/ 
+│   │   └── schema.prisma -------- # Database schema
 │   └── package.json
 │
 ├── .gitignore
 └── README.md
-
 ---
 
 ## 📝 Features
