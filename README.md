@@ -28,47 +28,6 @@ Features include rich-text notes, drawing canvas, IPFS pinning, and Cardano wall
 
 ---
 
-## 📂 Project Structure
-
-project-root/
-│
-├── app/
-│ ├── (auth)/
-│ │ ├── login/
-│ │ └── register/
-│ ├── (dashboard)/
-│ │ ├── notes/
-│ │ ├── wallet/
-│ │ └── settings/
-│ ├── api/
-│ │ ├── auth/
-│ │ ├── notes/
-│ │ ├── ipfs/
-│ │ └── wallet/
-│ └── layout.tsx
-│
-├── components/
-│ ├── notes/
-│ ├── forms/
-│ ├── wallet/
-│ └── ui/
-│
-├── lib/
-│ ├── db.ts
-│ ├── auth.ts
-│ ├── ipfs.ts
-│ ├── wallet.ts
-│ └── validators/
-│
-├── prisma/
-│ └── schema.prisma
-│
-├── styles/
-│ └── globals.css
-└── README.md
-
----
-
 ## 📝 Features
 
 ### **Notes System**
