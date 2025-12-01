@@ -1,30 +1,59 @@
+
 # 📘 Notes App + Wallet + IPFS (Cardano)
 
-A modern full-stack application built using entity["software","Next.js","react framework"] with a built-in backend (App Router + Route Handlers).
+A modern full-stack application with separate **frontend** (Next.js) and **backend** (Node.js + TypeScript + Prisma) projects.  
 Features include rich-text notes, drawing canvas, IPFS pinning, and Cardano wallet integration.
 
 ---
 
 ## 🚀 Tech Stack
 
-### **Frontend + Backend (Unified via Next.js)**
-- entity["software","Next.js","react framework"] 16 (App Router)
+### **Frontend**
+- Next.js 16 (App Router + React framework)
 - React 19
 - TypeScript 5
-- entity["software","Tailwind CSS","utility-first css framework"] v4
+- Tailwind CSS v4
 - shadcn/ui (Radix UI primitives)
 - React Hook Form + Zod
 - Lucide React + React Icons
 
-### **Database**
-- Choice of:
-  - entity["software","PostgreSQL","relational database"]
-  - entity["software","MySQL","relational database"]
-- ORM: Prisma ORM
+### **Backend**
+- Node.js + TypeScript
+- Express (or NestJS)
+- Prisma ORM
+- PostgreSQL or MySQL
+- JWT authentication / NextAuth optional
+- IPFS integration
+- Cardano wallet integration
 
-### **Blockchain & Storage**
-- Cardano Wallet API
-- IPFS (gateway-based pinning or provider API)
+---
+
+## 📂 Project Structure (Option 1)
+
+project-root/
+│
+├── frontend/                # Next.js + React
+│   ├── app/                 # Pages (App Router)
+│   │   ├── (auth)/          # login, register
+│   │   ├── (dashboard)/     # notes, wallet, settings
+│   │   └── layout.tsx
+│   ├── components/          # React components
+│   ├── lib/                 # frontend helper functions
+│   ├── styles/              # Tailwind globals
+│   └── package.json
+│
+├── backend/                 # Node.js + Express/NestJS
+│   ├── src/
+│   │   ├── controllers/     # API route handlers
+│   │   ├── services/        # business logic
+│   │   ├── routes/          # express routes
+│   │   └── db.ts            # Prisma client
+│   ├── prisma/
+│   │   └── schema.prisma
+│   └── package.json
+│
+├── .gitignore
+└── README.md
 
 ---
 
@@ -41,7 +70,7 @@ Features include rich-text notes, drawing canvas, IPFS pinning, and Cardano wall
 
 ### **User System**
 - Registration & Login
-- JWT-based session or NextAuth configuration
+- JWT-based session or NextAuth
 - User profile & settings
 - Wallet connection stored securely
 
@@ -100,42 +129,70 @@ model Note {
 
 ## ▶️ Getting Started
 
-1. Install Dependencies
-```
+### **Backend**
+1. Install dependencies
+\`\`\`
+cd backend
 npm install
-```
+\`\`\`
 
-2. Setup Environment Variables
-
-Create .env:
-```
+2. Setup environment variables (\`.env\`):
+\`\`\`
 DATABASE_URL="postgresql://user:pass@localhost:5432/notesdb"
-```
+IPFS_API_KEY="your_ipfs_key"
+CARDANO_API_KEY="your_cardano_key"
+\`\`\`
 
-Add IPFS provider keys, Cardano API provider keys, etc.
-
-3. Initialize Database
-```
+3. Initialize database
+\`\`\`
 npx prisma migrate dev
-```
+\`\`\`
 
-4. Run Dev Server
-```
+4. Run backend server
+\`\`\`
 npm run dev
-```
+\`\`\`
+
+---
+
+### **Frontend**
+1. Install dependencies
+\`\`\`
+cd frontend
+npm install
+\`\`\`
+
+2. Configure API base URL in \`.env\`:
+\`\`\`
+NEXT_PUBLIC_API_URL="http://localhost:4000/api"
+\`\`\`
+
+3. Run dev server
+\`\`\`
+npm run dev
+\`\`\`
 
 ---
 
 ## 📦 Build for Production
-```
+
+**Backend**
+\`\`\`
+cd backend
 npm run build
 npm run start
-```
+\`\`\`
+
+**Frontend**
+\`\`\`
+cd frontend
+npm run build
+npm run start
+\`\`\`
 
 ---
 
 ## 🧩 Roadmap
-
 - Offline mode (local IndexedDB cache)
 - End-to-end encryption for notes
 - Realtime sync
@@ -143,3 +200,5 @@ npm run start
 - Multi-tab notebook categories
 
 ---
+
+
