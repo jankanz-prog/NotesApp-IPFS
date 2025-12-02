@@ -175,3 +175,98 @@ export const updateProfilePicture = async (req: Request, res: Response): Promise
     res.status(500).json({ error: 'Failed to update profile picture' });
   }
 };
+
+export const linkWallet = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).userId;
+    const { walletAddress } = req.body;
+
+    if (!walletAddress) {
+      res.status(400).json({ error: 'Wallet address is required' });
+      return;
+    }
+
+    // Get current user
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!currentUser) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // If user already has a wallet linked, check if it matches
+    if (currentUser.walletAddress) {
+      if (currentUser.walletAddress !== walletAddress) {
+        res.status(400).json({ 
+          error: 'A different wallet is already linked to this account',
+          linkedWallet: currentUser.walletAddress,
+        });
+        return;
+      }
+      // Same wallet, just return success
+      res.json({ 
+        message: 'Wallet already linked', 
+        walletAddress: currentUser.walletAddress,
+      });
+      return;
+    }
+
+    // Check if this wallet is already linked to another account
+    const existingWalletUser = await prisma.user.findFirst({
+      where: { walletAddress },
+    });
+
+    if (existingWalletUser) {
+      res.status(400).json({ 
+        error: 'This wallet is already linked to another account',
+      });
+      return;
+    }
+
+    // Link the wallet to this user
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { walletAddress },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        profilePicture: true,
+        walletAddress: true,
+      },
+    });
+
+    res.json({ 
+      message: 'Wallet linked successfully', 
+      user,
+    });
+  } catch (error) {
+    console.error('Link wallet error:', error);
+    res.status(500).json({ error: 'Failed to link wallet' });
+  }
+};
+
+export const unlinkWallet = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).userId;
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { walletAddress: null },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        profilePicture: true,
+        walletAddress: true,
+      },
+    });
+
+    res.json({ message: 'Wallet unlinked successfully', user });
+  } catch (error) {
+    console.error('Unlink wallet error:', error);
+    res.status(500).json({ error: 'Failed to unlink wallet' });
+  }
+};

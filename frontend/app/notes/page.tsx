@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useNotesStore, Note } from '@/store/notesStore';
 import { useFoldersStore, Folder } from '@/store/foldersStore';
-import { Plus, BookOpen, LogOut, Star, Trash2, Save, Palette, Folder as FolderIcon, MoreVertical } from 'lucide-react';
+import { Plus, BookOpen, Star, Trash2, Save, Palette, Folder as FolderIcon } from 'lucide-react';
+import WalletConnect from '@/components/WalletConnect';
 
 const COLORS = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
 const IMPORTANCE_LEVELS = [1, 2, 3, 4, 5];
@@ -25,6 +26,13 @@ export default function NotesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showFolderInput, setShowFolderInput] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  
+  // New Note Modal State
+  const [showNewNoteModal, setShowNewNoteModal] = useState(false);
+  const [newNoteTitle, setNewNoteTitle] = useState('');
+  const [newNoteFolderId, setNewNoteFolderId] = useState<string | null>(null);
+  const [titleWarning, setTitleWarning] = useState<{ message: string; folderName: string } | null>(null);
+  const [isCreatingNote, setIsCreatingNote] = useState(false);
 
   useEffect(() => {
     initializeAuth();
@@ -56,20 +64,80 @@ export default function NotesPage() {
     router.push('/');
   };
 
-  const handleCreateNote = async () => {
-    try {
-      const newNote = await createNote({
-        title: 'Untitled Note',
-        content: '',
-        favorite: false,
-        importance: 1,
-        folderId: selectedFolder?.id || null, // Add to selected folder or default
-      });
-      setSelectedNote(newNote);
-      setSelectedFolder(null); // Go back to main view after creating
-    } catch (error) {
-      console.error('Failed to create note');
+  const handleOpenNewNoteModal = () => {
+    setNewNoteTitle('');
+    setNewNoteFolderId(selectedFolder?.id || null);
+    setTitleWarning(null);
+    setShowNewNoteModal(true);
+  };
+
+  const handleCreateNote = async (forceCreate: boolean = false) => {
+    if (!newNoteTitle.trim()) {
+      alert('Please enter a note title');
+      return;
     }
+
+    setIsCreatingNote(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/notes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          title: newNoteTitle.trim(),
+          content: '',
+          favorite: false,
+          importance: 1,
+          folderId: newNoteFolderId,
+          forceCreate,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.status === 409) {
+        // Duplicate title in same folder - not allowed
+        alert(data.error);
+        setIsCreatingNote(false);
+        return;
+      }
+
+      if (response.status === 200 && data.warning) {
+        // Same title exists in another folder - show warning
+        setTitleWarning({
+          message: data.warning,
+          folderName: data.existingFolderName || 'another folder',
+        });
+        setIsCreatingNote(false);
+        return;
+      }
+
+      if (data.note) {
+        // Refresh notes list and select the new note
+        await fetchNotes();
+        setSelectedNote(data.note);
+        setShowNewNoteModal(false);
+        setTitleWarning(null);
+        setNewNoteTitle('');
+        setSelectedFolder(null);
+      }
+    } catch (error) {
+      console.error('Failed to create note:', error);
+      alert('Failed to create note. Please try again.');
+    }
+    setIsCreatingNote(false);
+  };
+
+  const handleConfirmCreateWithWarning = async () => {
+    await handleCreateNote(true);
+  };
+
+  const handleCloseNewNoteModal = () => {
+    setShowNewNoteModal(false);
+    setTitleWarning(null);
+    setNewNoteTitle('');
   };
 
   const handleCreateFolder = async () => {
@@ -151,6 +219,7 @@ export default function NotesPage() {
             <span className="text-xl font-bold text-gray-900">Notes App</span>
           </div>
           <div className="flex items-center gap-4">
+            <WalletConnect />
             <span className="text-sm text-gray-900">Hi, {user.username}</span>
             <button
               onClick={handleLogout}
@@ -213,6 +282,43 @@ export default function NotesPage() {
               )}
             </div>
 
+            {/* Folders */}
+            <div className="mb-6">
+              <h3 className="text-sm font-bold text-gray-900 mb-2">Folders</h3>
+              {/* Default Folder */}
+              <button
+                onClick={() => setSelectedFolder(null)}
+                className={`flex items-center gap-2 w-full text-left text-sm px-2 py-1.5 rounded hover:bg-gray-100 mb-1 ${
+                  !selectedFolder ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-700'
+                }`}
+              >
+                <FolderIcon className="w-4 h-4" />
+                <span className="truncate">My Notes</span>
+                <span className="ml-auto text-xs text-gray-500">{defaultNotes.length}</span>
+              </button>
+              {/* User Folders */}
+              {folders.length === 0 ? (
+                <p className="text-xs text-gray-500 pl-2">No folders yet</p>
+              ) : (
+                <ul className="space-y-0.5">
+                  {folders.map((folder) => (
+                    <li key={folder.id}>
+                      <button
+                        onClick={() => setSelectedFolder(folder)}
+                        className={`flex items-center gap-2 w-full text-left text-sm px-2 py-1.5 rounded hover:bg-gray-100 ${
+                          selectedFolder?.id === folder.id ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-700'
+                        }`}
+                      >
+                        <FolderIcon className="w-4 h-4 text-blue-500" />
+                        <span className="truncate">{folder.name}</span>
+                        <span className="ml-auto text-xs text-gray-500">{folder._count?.notes || 0}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             {/* All Notes */}
             <div>
               <h3 className="text-sm font-bold text-gray-900 mb-2">All Notes</h3>
@@ -247,7 +353,7 @@ export default function NotesPage() {
                   {selectedFolder ? selectedFolder.name : 'My Notes'}
                 </h1>
                 <button
-                  onClick={handleCreateNote}
+                  onClick={handleOpenNewNoteModal}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
                   <Plus className="w-4 h-4" />
@@ -370,7 +476,7 @@ export default function NotesPage() {
                       <FolderIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                       <p className="text-gray-500 mb-4">No notes in this folder yet</p>
                       <button
-                        onClick={handleCreateNote}
+                        onClick={handleOpenNewNoteModal}
                         className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                       >
                         Create Note
@@ -516,6 +622,99 @@ export default function NotesPage() {
           )}
         </main>
       </div>
+
+      {/* New Note Modal */}
+      {showNewNoteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">Create New Note</h2>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {/* Note Title Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Note Title</label>
+                <input
+                  type="text"
+                  value={newNoteTitle}
+                  onChange={(e) => {
+                    setNewNoteTitle(e.target.value);
+                    setTitleWarning(null); // Clear warning when title changes
+                  }}
+                  onKeyPress={(e) => e.key === 'Enter' && !titleWarning && handleCreateNote()}
+                  placeholder="Enter note title..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  autoFocus
+                />
+              </div>
+
+              {/* Folder Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Save to Folder</label>
+                <select
+                  value={newNoteFolderId || ''}
+                  onChange={(e) => {
+                    setNewNoteFolderId(e.target.value || null);
+                    setTitleWarning(null); // Clear warning when folder changes
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="">My Notes (Default)</option>
+                  {folders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Title Warning */}
+              {titleWarning && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800 mb-3">
+                    <strong>Note:</strong> {titleWarning.message}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleConfirmCreateWithWarning}
+                      disabled={isCreatingNote}
+                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition disabled:opacity-50 text-sm"
+                    >
+                      {isCreatingNote ? 'Creating...' : 'Create Anyway'}
+                    </button>
+                    <button
+                      onClick={() => setTitleWarning(null)}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm"
+                    >
+                      Rename
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            {!titleWarning && (
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                <button
+                  onClick={handleCloseNewNoteModal}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleCreateNote()}
+                  disabled={isCreatingNote || !newNoteTitle.trim()}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                >
+                  {isCreatingNote ? 'Creating...' : 'Create Note'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

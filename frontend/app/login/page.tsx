@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { BookOpen } from 'lucide-react';
+import { FcGoogle } from 'react-icons/fc';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -72,6 +73,26 @@ export default function LoginPage() {
               {isLoading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          {/* Divider */}
+          <div className="flex items-center my-6">
+            <div className="flex-1 border-t border-gray-300"></div>
+            <span className="px-4 text-sm text-gray-500">or</span>
+            <div className="flex-1 border-t border-gray-300"></div>
+          </div>
+
+          {/* Google Sign In */}
+          <button
+            type="button"
+            onClick={() => {
+              // TODO: Implement Google OAuth with Firebase
+              console.log('Google sign-in clicked');
+            }}
+            className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700 font-medium"
+          >
+            <FcGoogle className="w-5 h-5" />
+            Sign in with Google
+          </button>
 
           <p className="mt-6 text-center text-sm text-gray-600">
             Don't have an account?{' '}

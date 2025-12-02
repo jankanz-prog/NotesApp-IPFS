@@ -9,13 +9,16 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@blaze-cardano/sdk": "^0.2.44",
     "@hookform/resolvers": "^5.2.2",
     "axios": "^1.13.2",
+    "buffer": "^6.0.3",
     "lucide-react": "^0.555.0",
     "next": "16.0.6",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-hook-form": "^7.67.0",
+    "react-icons": "^5.5.0",
     "zod": "^4.1.13",
     "zustand": "^5.0.9"
   },

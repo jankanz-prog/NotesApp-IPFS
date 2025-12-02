@@ -24,7 +24,30 @@ model User {
 
   notes         Note[]
   folders       Folder[]
-  walletAddress String?
+  walletAddress String?  @unique
+  
+  // Transactions sent by this user
+  sentTransactions Transaction[] @relation("SentTransactions")
+}
+
+model Transaction {
+  id              String   @id @default(cuid())
+  senderId        String
+  senderWallet    String
+  recipientWallet String
+  amount          Float    // Amount in ADA
+  txHash          String   @unique
+  status          String   @default("SUBMITTED") // SUBMITTED, CONFIRMED, FAILED
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  sender          User     @relation("SentTransactions", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([senderWallet])
+  @@index([recipientWallet])
+  @@index([txHash])
 }
 
 model Folder {
@@ -41,24 +64,36 @@ model Folder {
   @@index([userId])
 }
 
+enum NoteStatus {
+  PENDING
+  SUBMITTED
+  CONFIRMED
+  FAILED
+}
+
 model Note {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   userId      String
-  folderId    String?  // Nullable - null means default folder
+  folderId    String?    // Nullable - null means default folder
   title       String
-  content     String   @db.Text
-  drawing     String?  @db.Text
-  favorite    Boolean  @default(false)
-  importance  Int      @default(1)
+  content     String     @db.Text
+  drawing     String?    @db.Text
+  favorite    Boolean    @default(false)
+  importance  Int        @default(1)
   color       String?
   ipfsHash    String?
+  
+  // Blockchain fields
+  txHash      String?    // Cardano transaction hash
+  status      NoteStatus @default(PENDING)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  folder      Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder      Folder?    @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([folderId])
+  @@index([status])
 }

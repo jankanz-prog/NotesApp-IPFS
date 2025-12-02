@@ -22,6 +22,8 @@ interface AuthState {
   logout: () => void;
   setUser: (user: User) => void;
   initializeAuth: () => void;
+  linkWallet: (walletAddress: string) => Promise<{ success: boolean; error?: string; linkedWallet?: string }>;
+  unlinkWallet: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -106,6 +108,41 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     } else {
       set({ isInitialized: true });
+    }
+  },
+
+  linkWallet: async (walletAddress: string) => {
+    try {
+      const response = await api.post('/auth/wallet/link', { walletAddress });
+      const { user } = response.data;
+      
+      if (user) {
+        set({ user });
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+      
+      return { success: true };
+    } catch (error: any) {
+      const errorData = error.response?.data;
+      return { 
+        success: false, 
+        error: errorData?.error || 'Failed to link wallet',
+        linkedWallet: errorData?.linkedWallet,
+      };
+    }
+  },
+
+  unlinkWallet: async () => {
+    try {
+      const response = await api.delete('/auth/wallet/unlink');
+      const { user } = response.data;
+      
+      if (user) {
+        set({ user });
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+    } catch (error: any) {
+      console.error('Failed to unlink wallet:', error);
     }
   },
 }));

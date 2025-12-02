@@ -4,18 +4,64 @@ import prisma from '../db';
 export const createNote = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;
-    const { title, content, drawing, color, importance, favorite, folderId } = req.body;
+    const { title, content, drawing, color, importance, favorite, folderId, forceCreate } = req.body;
 
     if (!title) {
       res.status(400).json({ error: 'Title is required' });
       return;
     }
 
+    const trimmedTitle = title.trim();
+    const targetFolderId = folderId || null;
+
+    // Check for duplicate title in the SAME folder (not allowed)
+    const duplicateInSameFolder = await prisma.note.findFirst({
+      where: {
+        userId,
+        title: trimmedTitle,
+        folderId: targetFolderId,
+      },
+    });
+
+    if (duplicateInSameFolder) {
+      const folderName = targetFolderId 
+        ? (await prisma.folder.findUnique({ where: { id: targetFolderId } }))?.name || 'this folder'
+        : 'My Notes (Default)';
+      res.status(409).json({ 
+        error: `A note with the title "${trimmedTitle}" already exists in ${folderName}. Please use a different title.` 
+      });
+      return;
+    }
+
+    // Check for duplicate title in OTHER folders (allowed with warning)
+    if (!forceCreate) {
+      const duplicateInOtherFolder = await prisma.note.findFirst({
+        where: {
+          userId,
+          title: trimmedTitle,
+          folderId: { not: targetFolderId },
+        },
+        include: {
+          folder: true,
+        },
+      });
+
+      if (duplicateInOtherFolder) {
+        const existingFolderName = duplicateInOtherFolder.folder?.name || 'My Notes (Default)';
+        res.status(200).json({
+          warning: `There is another note with the same title "${trimmedTitle}" in "${existingFolderName}".`,
+          existingFolderName,
+          requiresConfirmation: true,
+        });
+        return;
+      }
+    }
+
     const note = await prisma.note.create({
       data: {
         userId,
-        folderId: folderId || null, // null means default folder
-        title,
+        folderId: targetFolderId,
+        title: trimmedTitle,
         content: content || '',
         drawing,
         color,
