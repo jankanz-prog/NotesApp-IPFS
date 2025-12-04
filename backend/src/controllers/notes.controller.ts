@@ -4,7 +4,7 @@ import prisma from '../db';
 export const createNote = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;
-    const { title, content, drawing, color, importance, favorite, folderId, forceCreate } = req.body;
+    const { title, content, drawing, color, importance, favorite, folderId, forceCreate, txHash, status } = req.body;
 
     if (!title) {
       res.status(400).json({ error: 'Title is required' });
@@ -67,6 +67,8 @@ export const createNote = async (req: Request, res: Response): Promise<void> => 
         color,
         importance: importance || 1,
         favorite: favorite || false,
+        txHash: txHash || null,
+        status: status || 'PENDING',
       },
     });
 
@@ -121,7 +123,7 @@ export const updateNote = async (req: Request, res: Response): Promise<void> => 
   try {
     const userId = (req as any).userId;
     const { id } = req.params;
-    const { title, content, drawing, color, importance, favorite, ipfsHash } = req.body;
+    const { title, content, drawing, color, importance, favorite, ipfsHash, txHash, status } = req.body;
 
     console.log('Update request for note:', id);
     console.log('User ID:', userId);
@@ -148,6 +150,8 @@ export const updateNote = async (req: Request, res: Response): Promise<void> => 
     if (importance !== undefined) updateData.importance = importance;
     if (favorite !== undefined) updateData.favorite = favorite;
     if (ipfsHash !== undefined) updateData.ipfsHash = ipfsHash;
+    if (txHash !== undefined) updateData.txHash = txHash;
+    if (status !== undefined) updateData.status = status;
 
     console.log('Update data:', updateData);
 

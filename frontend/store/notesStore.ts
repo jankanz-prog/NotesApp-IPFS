@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import api from '@/lib/api';
 
+export type NoteStatus = 'PENDING' | 'SUBMITTED' | 'CONFIRMED' | 'FAILED';
+
 export interface Note {
   id: string;
   userId: string;
@@ -12,6 +14,8 @@ export interface Note {
   importance: number;
   color?: string | null;
   ipfsHash?: string | null;
+  txHash?: string | null;
+  status: NoteStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,9 +31,11 @@ interface NotesState {
   fetchNoteById: (id: string) => Promise<void>;
   createNote: (noteData: Partial<Note>) => Promise<Note>;
   updateNote: (id: string, noteData: Partial<Note>) => Promise<void>;
+  updateNoteLocal: (id: string, noteData: Partial<Note>) => void;
   deleteNote: (id: string) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
   setCurrentNote: (note: Note | null) => void;
+  getPendingNotes: () => Note[];
 }
 
 export const useNotesStore = create<NotesState>((set, get) => ({
@@ -146,5 +152,25 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   setCurrentNote: (note: Note | null) => {
     set({ currentNote: note });
+  },
+
+  // Update note locally without API call (for optimistic updates)
+  updateNoteLocal: (id: string, noteData: Partial<Note>) => {
+    set((state) => ({
+      notes: state.notes.map((note) =>
+        note.id === id ? { ...note, ...noteData } : note
+      ),
+      currentNote: state.currentNote?.id === id 
+        ? { ...state.currentNote, ...noteData } 
+        : state.currentNote,
+    }));
+  },
+
+  // Get all notes with PENDING or SUBMITTED status (for background worker)
+  getPendingNotes: () => {
+    const { notes } = get();
+    return notes.filter((note) => 
+      note.status === 'PENDING' || note.status === 'SUBMITTED'
+    );
   },
 }));

@@ -3,10 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-import { useNotesStore, Note } from '@/store/notesStore';
+import { useNotesStore, Note, NoteStatus } from '@/store/notesStore';
 import { useFoldersStore, Folder } from '@/store/foldersStore';
-import { Plus, BookOpen, Star, Trash2, Save, Palette, Folder as FolderIcon } from 'lucide-react';
+import { useWalletStore } from '@/store/walletStore';
+import { useBlockchainNotes } from '@/hooks/useBlockchainNotes';
+import { Plus, BookOpen, Star, Trash2, Save, Palette, Folder as FolderIcon, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import WalletConnect from '@/components/WalletConnect';
+import BlockchainRecovery from '@/components/BlockchainRecovery';
 
 const COLORS = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
 const IMPORTANCE_LEVELS = [1, 2, 3, 4, 5];
@@ -16,8 +19,11 @@ export default function NotesPage() {
   const { user, logout, initializeAuth, isInitialized } = useAuthStore();
   const { notes, fetchNotes, isLoading, createNote, updateNote, deleteNote, toggleFavorite } = useNotesStore();
   const { folders, fetchFolders, createFolder, deleteFolder } = useFoldersStore();
+  const { isConnected: isWalletConnected } = useWalletStore();
+  const { sendNoteToBlockchain } = useBlockchainNotes();
   
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [isSendingToBlockchain, setIsSendingToBlockchain] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -122,6 +128,9 @@ export default function NotesPage() {
         setTitleWarning(null);
         setNewNoteTitle('');
         setSelectedFolder(null);
+
+        // NOTE: Don't send to blockchain on creation - note is empty
+        // Blockchain transaction will happen when user saves with content
       }
     } catch (error) {
       console.error('Failed to create note:', error);
@@ -168,9 +177,36 @@ export default function NotesPage() {
   const handleSave = async () => {
     if (!selectedNote) return;
     
+    // Prevent save if already sending to blockchain (avoid UTxO conflicts)
+    if (isSendingToBlockchain) {
+      console.warn('Transaction in progress, please wait...');
+      return;
+    }
+    
     setIsSaving(true);
     try {
       await updateNote(selectedNote.id, { title, content, color, importance });
+      
+      // Only send to blockchain if:
+      // 1. Wallet is connected
+      // 2. Note has actual content (not empty)
+      // 3. Not already processing a transaction
+      const hasContent = content.trim().length > 0;
+      
+      if (isWalletConnected && hasContent) {
+        setIsSendingToBlockchain(true);
+        try {
+          const updatedNote = { ...selectedNote, title, content, color, importance };
+          // Use CREATE if note has never been on chain, otherwise UPDATE
+          const action = selectedNote.txHash ? 'UPDATE' : 'CREATE';
+          await sendNoteToBlockchain(updatedNote, action);
+        } catch (error) {
+          console.error(`Blockchain ${selectedNote.txHash ? 'UPDATE' : 'CREATE'} transaction failed:`, error);
+        } finally {
+          setIsSendingToBlockchain(false);
+        }
+      }
+      
       setTimeout(() => setIsSaving(false), 500);
     } catch (error) {
       setIsSaving(false);
@@ -180,7 +216,25 @@ export default function NotesPage() {
   const handleDelete = async () => {
     if (!selectedNote) return;
     
+    // Prevent delete if transaction in progress
+    if (isSendingToBlockchain) {
+      alert('Please wait for the current blockchain transaction to complete.');
+      return;
+    }
+    
     if (confirm('Delete this note?')) {
+      // Only send DELETE to blockchain if note was previously on chain
+      if (isWalletConnected && selectedNote.txHash) {
+        setIsSendingToBlockchain(true);
+        try {
+          await sendNoteToBlockchain(selectedNote, 'DELETE');
+        } catch (error) {
+          console.error('Blockchain DELETE transaction failed:', error);
+        } finally {
+          setIsSendingToBlockchain(false);
+        }
+      }
+      
       await deleteNote(selectedNote.id);
       setSelectedNote(null);
     }
@@ -209,6 +263,46 @@ export default function NotesPage() {
     ? notes.filter(note => note.folderId === selectedFolder.id)
     : defaultNotes;
 
+  // Helper function to render blockchain status badge
+  const renderStatusBadge = (status: NoteStatus, compact: boolean = false) => {
+    const baseClasses = compact 
+      ? 'inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded'
+      : 'inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full';
+    
+    switch (status) {
+      case 'PENDING':
+        return (
+          <span className={`${baseClasses} bg-gray-100 text-gray-600`} title="Waiting for blockchain transaction">
+            <Clock className="w-3 h-3" />
+            {!compact && 'Pending'}
+          </span>
+        );
+      case 'SUBMITTED':
+        return (
+          <span className={`${baseClasses} bg-yellow-100 text-yellow-700`} title="Transaction submitted, waiting for confirmation">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            {!compact && 'Submitted'}
+          </span>
+        );
+      case 'CONFIRMED':
+        return (
+          <span className={`${baseClasses} bg-green-100 text-green-700`} title="Confirmed on blockchain">
+            <CheckCircle className="w-3 h-3" />
+            {!compact && 'Confirmed'}
+          </span>
+        );
+      case 'FAILED':
+        return (
+          <span className={`${baseClasses} bg-red-100 text-red-700`} title="Transaction failed">
+            <XCircle className="w-3 h-3" />
+            {!compact && 'Failed'}
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Header */}
@@ -219,6 +313,7 @@ export default function NotesPage() {
             <span className="text-xl font-bold text-gray-900">Notes App</span>
           </div>
           <div className="flex items-center gap-4">
+            <BlockchainRecovery onRecoveryComplete={fetchNotes} />
             <WalletConnect />
             <span className="text-sm text-gray-900">Hi, {user.username}</span>
             <button
@@ -376,11 +471,19 @@ export default function NotesPage() {
                           <h3 className="font-semibold text-lg text-gray-900 truncate flex-1">
                             {note.title || 'Untitled'}
                           </h3>
-                          {note.favorite && <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />}
+                          <div className="flex items-center gap-1">
+                            {note.favorite && <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />}
+                            {renderStatusBadge(note.status, true)}
+                          </div>
                         </div>
-                        <p className="text-gray-600 text-sm line-clamp-2">
+                        <p className="text-gray-600 text-sm line-clamp-2 mb-2">
                           {note.content || 'No content'}
                         </p>
+                        {note.txHash && (
+                          <p className="text-xs text-gray-400 truncate" title={note.txHash}>
+                            tx: {note.txHash.slice(0, 8)}...
+                          </p>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -495,11 +598,19 @@ export default function NotesPage() {
                             <h3 className="font-semibold text-lg text-gray-900 truncate flex-1">
                               {note.title || 'Untitled'}
                             </h3>
-                            {note.favorite && <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />}
+                            <div className="flex items-center gap-1">
+                              {note.favorite && <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />}
+                              {renderStatusBadge(note.status, true)}
+                            </div>
                           </div>
-                          <p className="text-gray-600 text-sm line-clamp-2">
+                          <p className="text-gray-600 text-sm line-clamp-2 mb-2">
                             {note.content || 'No content'}
                           </p>
+                          {note.txHash && (
+                            <p className="text-xs text-gray-400 truncate" title={note.txHash}>
+                              tx: {note.txHash.slice(0, 8)}...
+                            </p>
+                          )}
                         </button>
                       ))}
                     </div>
@@ -584,14 +695,39 @@ export default function NotesPage() {
                       <Trash2 className="w-5 h-5" />
                     </button>
 
+                    {/* Blockchain Status */}
+                    <div className="flex items-center gap-2 ml-2 px-3 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                      {renderStatusBadge(selectedNote.status)}
+                      {selectedNote.txHash && (
+                        <a
+                          href={`https://preview.cardanoscan.io/transaction/${selectedNote.txHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline"
+                          title={`View on Cardanoscan: ${selectedNote.txHash}`}
+                        >
+                          View TX
+                        </a>
+                      )}
+                    </div>
+
                     {/* Save */}
                     <button
                       onClick={handleSave}
-                      disabled={isSaving}
+                      disabled={isSaving || isSendingToBlockchain}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
                     >
-                      <Save className="w-4 h-4" />
-                      {isSaving ? 'Saved' : 'Save'}
+                      {isSendingToBlockchain ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Sending to Chain...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          {isSaving ? 'Saved' : 'Save'}
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
