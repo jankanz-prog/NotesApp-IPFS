@@ -7,7 +7,7 @@ import { useNotesStore, Note, NoteStatus } from '@/store/notesStore';
 import { useFoldersStore, Folder } from '@/store/foldersStore';
 import { useWalletStore } from '@/store/walletStore';
 import { useBlockchainNotes } from '@/hooks/useBlockchainNotes';
-import { Plus, BookOpen, Star, Trash2, Save, Palette, Folder as FolderIcon, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Plus, BookOpen, Star, Trash2, Save, Palette, Folder as FolderIcon, Clock, CheckCircle, XCircle, Loader2, Link } from 'lucide-react';
 import WalletConnect from '@/components/WalletConnect';
 import BlockchainRecovery from '@/components/BlockchainRecovery';
 
@@ -174,42 +174,60 @@ export default function NotesPage() {
     setSelectedNote(note);
   };
 
+  // Local save only - no blockchain transaction
   const handleSave = async () => {
     if (!selectedNote) return;
-    
-    // Prevent save if already sending to blockchain (avoid UTxO conflicts)
-    if (isSendingToBlockchain) {
-      console.warn('Transaction in progress, please wait...');
-      return;
-    }
     
     setIsSaving(true);
     try {
       await updateNote(selectedNote.id, { title, content, color, importance });
-      
-      // Only send to blockchain if:
-      // 1. Wallet is connected
-      // 2. Note has actual content (not empty)
-      // 3. Not already processing a transaction
-      const hasContent = content.trim().length > 0;
-      
-      if (isWalletConnected && hasContent) {
-        setIsSendingToBlockchain(true);
-        try {
-          const updatedNote = { ...selectedNote, title, content, color, importance };
-          // Use CREATE if note has never been on chain, otherwise UPDATE
-          const action = selectedNote.txHash ? 'UPDATE' : 'CREATE';
-          await sendNoteToBlockchain(updatedNote, action);
-        } catch (error) {
-          console.error(`Blockchain ${selectedNote.txHash ? 'UPDATE' : 'CREATE'} transaction failed:`, error);
-        } finally {
-          setIsSendingToBlockchain(false);
-        }
-      }
-      
+      // Update local state to reflect saved content
+      setSelectedNote({ ...selectedNote, title, content, color, importance });
       setTimeout(() => setIsSaving(false), 500);
     } catch (error) {
+      console.error('Failed to save note:', error);
       setIsSaving(false);
+    }
+  };
+
+  // Explicit blockchain sync - only when user clicks "Sync to Chain"
+  const handleSyncToChain = async () => {
+    if (!selectedNote) return;
+    
+    // Check prerequisites
+    if (!isWalletConnected) {
+      alert('Please connect your wallet first to sync to blockchain.');
+      return;
+    }
+    
+    if (isSendingToBlockchain) {
+      alert('A blockchain transaction is already in progress. Please wait.');
+      return;
+    }
+    
+    const hasContent = content.trim().length > 0;
+    if (!hasContent) {
+      alert('Please add some content to the note before syncing to blockchain.');
+      return;
+    }
+    
+    // Save locally first to ensure latest content is synced
+    await updateNote(selectedNote.id, { title, content, color, importance });
+    
+    setIsSendingToBlockchain(true);
+    try {
+      const noteToSync = { ...selectedNote, title, content, color, importance };
+      // Use CREATE if note has never been on chain, otherwise UPDATE
+      const action = selectedNote.txHash ? 'UPDATE' : 'CREATE';
+      await sendNoteToBlockchain(noteToSync, action);
+      
+      // Refresh notes to get updated txHash and status
+      await fetchNotes();
+    } catch (error) {
+      console.error(`Blockchain sync failed:`, error);
+      alert('Failed to sync to blockchain. Please try again.');
+    } finally {
+      setIsSendingToBlockchain(false);
     }
   };
 
@@ -695,8 +713,22 @@ export default function NotesPage() {
                       <Trash2 className="w-5 h-5" />
                     </button>
 
+                    {/* Local Save */}
+                    <button
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                      title="Save locally"
+                    >
+                      <Save className="w-4 h-4" />
+                      {isSaving ? 'Saved!' : 'Save'}
+                    </button>
+
+                    {/* Divider */}
+                    <div className="h-8 w-px bg-gray-300"></div>
+
                     {/* Blockchain Status */}
-                    <div className="flex items-center gap-2 ml-2 px-3 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-lg border border-gray-200">
                       {renderStatusBadge(selectedNote.status)}
                       {selectedNote.txHash && (
                         <a
@@ -711,21 +743,26 @@ export default function NotesPage() {
                       )}
                     </div>
 
-                    {/* Save */}
+                    {/* Sync to Chain */}
                     <button
-                      onClick={handleSave}
-                      disabled={isSaving || isSendingToBlockchain}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                      onClick={handleSyncToChain}
+                      disabled={isSendingToBlockchain || !isWalletConnected}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition disabled:opacity-50 ${
+                        isWalletConnected 
+                          ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                      title={isWalletConnected ? 'Sync note to Cardano blockchain' : 'Connect wallet to sync'}
                     >
                       {isSendingToBlockchain ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          Sending to Chain...
+                          Syncing...
                         </>
                       ) : (
                         <>
-                          <Save className="w-4 h-4" />
-                          {isSaving ? 'Saved' : 'Save'}
+                          <Link className="w-4 h-4" />
+                          Sync to Chain
                         </>
                       )}
                     </button>
