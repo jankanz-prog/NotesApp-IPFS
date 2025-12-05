@@ -6,12 +6,15 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { BookOpen } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
+import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
+import api from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading, error } = useAuthStore();
+  const { login, isLoading, error, setUser } = useAuthStore();
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [googleError, setGoogleError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +24,28 @@ export default function LoginPage() {
     } catch (error) {
       // Error handled by store
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    try {
+      setGoogleError('');
+      const response = await api.post('/auth/google', {
+        credential: credentialResponse.credential,
+      });
+
+      if (response.data.token && response.data.user) {
+        localStorage.setItem('token', response.data.token);
+        setUser(response.data.user);
+        router.push('/notes');
+      }
+    } catch (error: any) {
+      console.error('Google login error:', error);
+      setGoogleError(error.response?.data?.error || 'Failed to sign in with Google');
+    }
+  };
+
+  const handleGoogleError = () => {
+    setGoogleError('Google sign-in was cancelled or failed');
   };
 
   return (
@@ -34,9 +59,9 @@ export default function LoginPage() {
         <div className="bg-white p-8 rounded-lg shadow-md">
           <h1 className="text-2xl font-bold mb-6 text-center text-gray-900">Welcome Back</h1>
 
-          {error && (
+          {(error || googleError) && (
             <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
-              {error}
+              {error || googleError}
             </div>
           )}
 
@@ -82,17 +107,16 @@ export default function LoginPage() {
           </div>
 
           {/* Google Sign In */}
-          <button
-            type="button"
-            onClick={() => {
-              // TODO: Implement Google OAuth with Firebase
-              console.log('Google sign-in clicked');
-            }}
-            className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700 font-medium"
-          >
-            <FcGoogle className="w-5 h-5" />
-            Sign in with Google
-          </button>
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              theme="outline"
+              size="large"
+              text="signin_with"
+              shape="rectangular"
+            />
+          </div>
 
           <p className="mt-6 text-center text-sm text-gray-600">
             Don't have an account?{' '}
