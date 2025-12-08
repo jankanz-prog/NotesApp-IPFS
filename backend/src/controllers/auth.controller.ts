@@ -34,6 +34,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         email,
         username,
         passwordHash,
+        provider: 'local',
         profilePicture: req.body.profilePicture || null,
       },
       select: {
@@ -85,6 +86,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     if (!user) {
       res.status(401).json({ error: 'Invalid credentials' });
+      return;
+    }
+
+    // Check if user registered with OAuth (no password)
+    if (!user.passwordHash) {
+      res.status(401).json({ error: 'This account uses Google Sign-In. Please sign in with Google.' });
       return;
     }
 
