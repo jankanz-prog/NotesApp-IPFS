@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useWalletStore } from '@/store/walletStore';
 import { useAuthStore } from '@/store/authStore';
-import { Wallet, ChevronDown, LogOut, Copy, Check, AlertTriangle, Link, Send, History } from 'lucide-react';
+import { useTransactionStatus } from '@/hooks/useTransactionStatus';
+import { Wallet, ChevronDown, LogOut, Copy, Check, AlertTriangle, Link, Unlink, Send, History, AlertCircle, Download, X } from 'lucide-react';
 import SendAdaModal from './SendAdaModal';
 import TransactionHistory from './TransactionHistory';
 
@@ -23,14 +24,20 @@ export default function WalletConnect() {
     clearError,
   } = useWalletStore();
 
-  const { user, linkWallet } = useAuthStore();
+  const { user, linkWallet, unlinkWallet } = useAuthStore();
+
+  // Start transaction status polling
+  useTransactionStatus();
 
   const [showDropdown, setShowDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
+  const [isUnlinking, setIsUnlinking] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [showSendModal, setShowSendModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
+  const [showNoWalletModal, setShowNoWalletModal] = useState(false);
 
   useEffect(() => {
     // Detect wallets on mount (client-side only)
@@ -131,6 +138,20 @@ export default function WalletConnect() {
               <History className="w-4 h-4" />
               <span className="text-sm">Transaction History</span>
             </button>
+
+            {/* Unlink Wallet Button - only show if wallet is linked to account */}
+            {user?.walletAddress && (
+              <button
+                onClick={() => {
+                  setShowDropdown(false);
+                  setShowUnlinkConfirm(true);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-orange-600 hover:bg-orange-50 transition"
+              >
+                <Unlink className="w-4 h-4" />
+                <span className="text-sm">Unlink from Account</span>
+              </button>
+            )}
             
             <button
               onClick={() => {
@@ -156,6 +177,47 @@ export default function WalletConnect() {
           isOpen={showHistoryModal}
           onClose={() => setShowHistoryModal(false)}
         />
+
+        {/* Unlink Wallet Confirmation Modal */}
+        {showUnlinkConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-orange-100 rounded-full">
+                  <AlertCircle className="w-6 h-6 text-orange-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 text-center mb-2">
+                  Unlink Wallet?
+                </h3>
+                <p className="text-sm text-gray-600 text-center mb-6">
+                  This will remove the connection between your wallet and your account. 
+                  You can link it again later.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowUnlinkConfirm(false)}
+                    className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setIsUnlinking(true);
+                      await unlinkWallet();
+                      setIsUnlinking(false);
+                      disconnectWallet();
+                      setShowUnlinkConfirm(false);
+                    }}
+                    disabled={isUnlinking}
+                    className="flex-1 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-medium disabled:opacity-50"
+                  >
+                    {isUnlinking ? 'Unlinking...' : 'Unlink'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -193,14 +255,15 @@ export default function WalletConnect() {
           {availableWallets.length === 0 ? (
             <div className="p-4 text-center">
               <p className="text-sm text-gray-500 mb-2">No wallets detected</p>
-              <a
-                href="https://www.lace.io/"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => {
+                  setShowDropdown(false);
+                  setShowNoWalletModal(true);
+                }}
                 className="text-xs text-blue-600 hover:underline"
               >
-                Install Lace Wallet →
-              </a>
+                Learn how to install →
+              </button>
             </div>
           ) : (
             <div className="p-2">
@@ -305,6 +368,82 @@ export default function WalletConnect() {
           className="fixed inset-0 z-40"
           onClick={() => setShowDropdown(false)}
         />
+      )}
+
+      {/* No Wallet Detected Modal */}
+      {showNoWalletModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-purple-600 to-blue-600">
+              <h2 className="text-lg font-bold text-white">Wallet Required</h2>
+              <button
+                onClick={() => setShowNoWalletModal(false)}
+                className="p-1 hover:bg-white/20 rounded-lg transition"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-orange-100 rounded-full">
+                <AlertTriangle className="w-8 h-8 text-orange-600" />
+              </div>
+              
+              <h3 className="text-lg font-bold text-gray-900 text-center mb-2">
+                No Cardano Wallet Detected
+              </h3>
+              
+              <p className="text-sm text-gray-600 text-center mb-6">
+                To use blockchain features like sending ADA and saving notes on-chain, 
+                you need to install a Cardano wallet browser extension.
+              </p>
+
+              <div className="bg-purple-50 rounded-lg p-4 mb-6">
+                <h4 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
+                  <Download className="w-4 h-4" />
+                  Recommended: Lace Wallet
+                </h4>
+                <p className="text-sm text-purple-700 mb-3">
+                  Lace is a user-friendly Cardano wallet developed by IOG (Input Output Global).
+                </p>
+                <ul className="text-xs text-purple-600 space-y-1 mb-3">
+                  <li>• Easy to use interface</li>
+                  <li>• Secure key management</li>
+                  <li>• Supports Preview testnet</li>
+                  <li>• Free to install</li>
+                </ul>
+              </div>
+
+              <div className="space-y-3">
+                <a
+                  href="https://www.lace.io/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
+                >
+                  <Download className="w-4 h-4" />
+                  Install Lace Wallet
+                </a>
+                
+                <button
+                  onClick={() => {
+                    setShowNoWalletModal(false);
+                    detectWallets();
+                  }}
+                  className="w-full py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium text-sm"
+                >
+                  I've installed it - Refresh
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-500 text-center mt-4">
+                After installing, refresh this page or click the button above to detect your wallet.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

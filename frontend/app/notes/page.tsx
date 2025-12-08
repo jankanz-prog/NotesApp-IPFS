@@ -333,7 +333,23 @@ export default function NotesPage() {
           <div className="flex items-center gap-4">
             <BlockchainRecovery onRecoveryComplete={fetchNotes} />
             <WalletConnect />
-            <span className="text-sm text-gray-900">Hi, {user.username}</span>
+            <button
+              onClick={() => router.push('/profile')}
+              className="flex items-center gap-2 hover:opacity-80 transition"
+            >
+              {user.profilePicture ? (
+                <img
+                  src={user.profilePicture}
+                  alt={user.username}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium text-sm">
+                  {user.username.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span className="text-sm text-gray-900">Hi, {user.username}</span>
+            </button>
             <button
               onClick={handleLogout}
               className="px-4 py-2 text-gray-900 hover:text-red-600 transition"
