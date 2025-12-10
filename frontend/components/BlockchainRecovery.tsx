@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useWalletStore } from '@/store/walletStore';
 import { 
   recoverNotesFromBlockchain, 
@@ -31,6 +32,24 @@ export default function BlockchainRecovery({ onRecoveryComplete }: BlockchainRec
   const [importResults, setImportResults] = useState<{ success: number; failed: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (showModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showModal]);
 
   const handleRecover = async () => {
     if (!walletAddressBech32) {
@@ -167,9 +186,16 @@ export default function BlockchainRecovery({ onRecoveryComplete }: BlockchainRec
       </button>
 
       {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
+      {showModal && mounted && createPortal(
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in"
+          onClick={handleClose}
+          style={{ margin: 0 }}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <div>
@@ -320,7 +346,8 @@ export default function BlockchainRecovery({ onRecoveryComplete }: BlockchainRec
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

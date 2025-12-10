@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useWalletStore } from '@/store/walletStore';
 import { useAuthStore } from '@/store/authStore';
 import { useTransactionStatus } from '@/hooks/useTransactionStatus';
@@ -38,6 +39,24 @@ export default function WalletConnect() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [showNoWalletModal, setShowNoWalletModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (showUnlinkConfirm || showNoWalletModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showUnlinkConfirm, showNoWalletModal]);
 
   useEffect(() => {
     // Detect wallets on mount (client-side only)
@@ -179,9 +198,16 @@ export default function WalletConnect() {
         />
 
         {/* Unlink Wallet Confirmation Modal */}
-        {showUnlinkConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="glass rounded-xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden animate-scale-in">
+        {showUnlinkConfirm && mounted && createPortal(
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in"
+            onClick={() => setShowUnlinkConfirm(false)}
+            style={{ margin: 0 }}
+          >
+            <div 
+              className="glass rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-6">
                 <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-orange-100 rounded-full">
                   <AlertCircle className="w-6 h-6 text-orange-600" />
@@ -216,7 +242,8 @@ export default function WalletConnect() {
                 </div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     );
@@ -371,9 +398,16 @@ export default function WalletConnect() {
       )}
 
       {/* No Wallet Detected Modal */}
-      {showNoWalletModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="glass rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-scale-in">
+      {showNoWalletModal && mounted && createPortal(
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in"
+          onClick={() => setShowNoWalletModal(false)}
+          style={{ margin: 0 }}
+        >
+          <div 
+            className="glass rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-purple-600 to-blue-600">
               <h2 className="text-lg font-bold text-white">Wallet Required</h2>
@@ -443,7 +477,8 @@ export default function WalletConnect() {
               </p>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

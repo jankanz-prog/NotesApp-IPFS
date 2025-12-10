@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ExternalLink, User, Clock, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw } from 'lucide-react';
 import { useWalletStore } from '@/store/walletStore';
 import api from '@/lib/api';
@@ -36,6 +37,24 @@ export default function TransactionHistory({ isOpen, onClose }: TransactionHisto
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryingTx, setRetryingTx] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -148,11 +167,18 @@ export default function TransactionHistory({ isOpen, onClose }: TransactionHisto
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-      <div className="glass rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden flex flex-col animate-scale-in">
+  const modalContent = (
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in"
+      onClick={onClose}
+      style={{ margin: 0 }}
+    >
+      <div 
+        className="glass rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
           <h2 className="text-xl font-bold text-gray-900">Transaction History</h2>
@@ -302,4 +328,6 @@ export default function TransactionHistory({ isOpen, onClose }: TransactionHisto
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
