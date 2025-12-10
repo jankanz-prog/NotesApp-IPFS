@@ -1,190 +1,159 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BookOpen, Lock, Wallet, Upload, Sparkles, ArrowRight, Star, Quote } from 'lucide-react';
+import { BookOpen, Lock, Wallet, Upload } from 'lucide-react';
+import Image from 'next/image' // ✅ correct
+
 
 export default function Home() {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number }>>([]);
-
-  useEffect(() => {
-    // Create floating particles
-    const newParticles = Array.from({ length: 50 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      delay: Math.random() * 3,
-    }));
-    setParticles(newParticles);
-
-    // Track mouse for parallax effect
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({
-        x: (e.clientX / window.innerWidth - 0.5) * 20,
-        y: (e.clientY / window.innerHeight - 0.5) * 20,
-      });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
-
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-almond-cream via-desert-sand to-tan">
-      {/* Floating Particles Background */}
-      <div className="particles">
-        {particles.map((particle) => (
-          <div
-            key={particle.id}
-            className="particle"
-            style={{
-              left: `${particle.x}%`,
-              top: `${particle.y}%`,
-              animationDelay: `${particle.delay}s`,
-            }}
-          />
-        ))}
+    <div className='min-h-screen relative bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-x-hidden'>
+      {/* Soft Animated Gradient Layer */}
+      <div
+        className='absolute inset-0 -z-20 bg-cover bg-center bg-no-repeat'
+        style={{ backgroundImage: "url('')" }} // put your image in public/images/
+      ></div>
+      <div className='absolute inset-0 bg-gradient-to-tr from-blue-200 via-purple-200 to-pink-200 opacity-40 blur-2xl bg-[length:300%_300%] animate-gradient -z-10'></div>
+
+      {/* Floating Aura Lights */}
+      <div className='absolute inset-0 pointer-events-none'>
+        <div className='absolute top-12 left-20 w-96 h-96 bg-blue-300/40 rounded-full blur-3xl animate-floatSlow'></div>
+        <div className='absolute bottom-20 right-24 w-80 h-80 bg-pink-300/30 rounded-full blur-2xl animate-floatSlow delay-500'></div>
+        <div className='absolute top-1/2 left-1/2 -translate-x-1/2 w-96 h-96 bg-purple-300/20 rounded-full blur-[120px] animate-floatSlow delay-1000'></div>
       </div>
 
-      {/* Animated Gradient Background */}
-      <div 
-        className="fixed inset-0 opacity-30"
-        style={{
-          background: 'linear-gradient(135deg, #ede0d4 0%, #e6ccb2 25%, #ddb892 50%, #b08968 75%, #9c6644 100%)',
-          backgroundSize: '400% 400%',
-          animation: 'gradient 15s ease infinite',
-        }}
-      />
+      {/* Glow Rings */}
+      <div className='absolute inset-0 overflow-hidden pointer-events-none'>
+        <div className='absolute w-[600px] h-[600px] border border-white/10 rounded-full left-[-200px] top-[200px] animate-spinSlow'></div>
+        <div className='absolute w-[400px] h-[400px] border border-white/10 rounded-full right-[-150px] top-[300px] animate-spinSlowReverse'></div>
+      </div>
 
-      {/* Navigation */}
-      <nav className="relative z-10 container mx-auto px-4 py-6 animate-fade-in-down">
-        <div className="flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="relative">
-              <BookOpen className="w-8 h-8 text-coffee-bean group-hover:scale-110 transition-transform duration-300" />
-              <Sparkles className="w-4 h-4 text-toffee-brown absolute -top-1 -right-1 animate-pulse-slow" />
-            </div>
-            <span className="text-2xl font-bold gradient-text">Notes App</span>
-          </Link>
-          <div className="flex gap-4">
-            <Link 
-              href="/login" 
-              className="px-6 py-2 text-coffee-bean hover:text-toffee-brown transition-all duration-300 hover:scale-105 magnetic"
+      {/* Floating Sparkles */}
+      <div className='absolute inset-0 pointer-events-none'>
+        <div className='absolute w-2 h-2 bg-white/70 rounded-full blur-sm top-32 left-1/4 animate-twinkle'></div>
+        <div className='absolute w-2 h-2 bg-white/70 rounded-full blur-sm top-1/3 right-20 animate-twinkle delay-300'></div>
+        <div className='absolute w-2 h-2 bg-white/70 rounded-full blur-sm bottom-40 left-40 animate-twinkle delay-700'></div>
+        <div className='absolute w-2 h-2 bg-white/70 rounded-full blur-sm bottom-20 right-1/3 animate-twinkle delay-1000'></div>
+      </div>
+
+      {/* Glassmorphism Grid */}
+      <div className='absolute inset-0 pointer-events-none opacity-[0.06]'>
+        <div className='absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.1)_1px,transparent_1px),linear-gradient(rgba(0,0,0,0.1)_1px,transparent_1px)] bg-[size:50px_50px]'></div>
+      </div>
+
+      {/* MAIN CONTENT */}
+      <div className='container mx-auto px-4 py-16 relative z-10'>
+        {/* Navbar */}
+        <nav className='flex justify-between items-center mb-20'>
+          <div className='flex items-center gap-2 animate-bounceSlow'>
+            <Image
+              src='/images/batibot_logo-removebg-preview.png' // Make sure this file exists in public/images/logo.png
+              alt='Notes App Logo'
+              width={100}
+              height={100}
+              className='object-contain'
+            />
+            <span className='text-3xl font-bold text-gray-900'>Notes App</span>
+          </div>
+
+          <div className='flex gap-4'>
+            <Link
+              href='/login'
+              className='px-6 py-2 text-gray-700 hover:text-blue-600 transition'
             >
               Login
             </Link>
-            <Link 
-              href="/register" 
-              className="px-6 py-2 bg-coffee-bean text-almond-cream rounded-lg hover:bg-toffee-brown transition-all duration-300 shadow-lg hover:shadow-xl magnetic ripple-effect"
+            <Link
+              href='/register'
+              className='px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-xl transition'
             >
               Get Started
             </Link>
           </div>
+        </nav>
+
+        {/* Hero Section */}
+        <div className='max-w-4xl mx-auto text-center mt-20'>
+          <h1
+            className='
+    text-7xl font-extrabold mb-8
+    bg-gradient-to-r from-blue-500 via-purple-600 to-pink-600
+    bg-clip-text text-transparent
+    animate-gradientMove animate-floatPulse
+    drop-shadow-[0_0_25px_rgba(99,102,241,0.4)]
+  '
+          >
+            Your Notes, Decentralized
+          </h1>
+
+          <p className='text-xl text-gray-600 mb-12 animate-fade-in delay-200'>
+            A modern note-taking app with IPFS storage and Cardano wallet
+            integration. Keep your thoughts secure and accessible anywhere.
+          </p>
+          <Link
+            href='/register'
+            className='inline-block px-8 py-4 bg-blue-600 text-white text-lg rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg hover:shadow-2xl animate-bounce'
+          >
+            Start Writing
+          </Link>
         </div>
-      </nav>
 
-      {/* Hero Section */}
-      <section className="relative z-10 container mx-auto px-4 py-20 mt-10">
-        <div 
-          className="max-w-4xl mx-auto text-center"
-          style={{
-            transform: `translate(${mousePosition.x * 0.1}px, ${mousePosition.y * 0.1}px)`,
-            transition: 'transform 0.1s ease-out',
-          }}
-        >
-          <div className="animate-fade-in-up">
-            <h1 className="text-7xl md:text-8xl font-bold mb-6 gradient-text animate-scale-in">
-              <span className="inline-block animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-                Your Notes,
-              </span>
-              <br />
-              <span className="inline-block animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-                Decentralized
-              </span>
-            </h1>
-            <p className="text-xl md:text-2xl text-coffee-bean mb-12 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
-              A modern note-taking app with IPFS storage and Cardano wallet integration. 
-              Keep your thoughts secure and accessible anywhere.
-            </p>
-            <Link 
-              href="/register" 
-              className="inline-flex items-center gap-3 px-10 py-5 bg-coffee-bean text-almond-cream text-lg rounded-xl hover:bg-toffee-brown transition-all duration-300 shadow-2xl hover:shadow-3xl magnetic ripple-effect animate-bounce-in"
-              style={{ animationDelay: '0.7s' }}
-            >
-              Start Writing
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
+        {/* Features Section */}
+        <div className='mt-28'>
+          <h2 className='text-2xl font-semibold text-center mb-12 text-gray-900 animate-fadeIn delay-300'>
+            Features
+          </h2>
 
-          {/* Scroll Indicator */}
-          <div className="mt-20 animate-bounce">
-            <div className="w-6 h-10 border-2 border-coffee-bean rounded-full mx-auto flex items-start justify-center p-2">
-              <div className="w-1 h-3 bg-coffee-bean rounded-full animate-pulse"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Gallery */}
-      <section className="relative z-10 container mx-auto px-4 py-20">
-        <h2 className="text-4xl font-bold text-center mb-16 gradient-text animate-fade-in-up">Features</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            {
-              icon: BookOpen,
-              title: 'Rich Text Editor',
-              description: 'Format your notes with headings, bold, italics, and custom fonts.',
-              color: 'from-coffee-bean to-toffee-brown',
-              delay: '0.1s',
-            },
-            {
-              icon: Lock,
-              title: 'Secure Storage',
-              description: 'Your notes are encrypted and stored securely in the database.',
-              color: 'from-faded-copper to-coffee-bean',
-              delay: '0.2s',
-            },
-            {
-              icon: Upload,
-              title: 'IPFS Integration',
-              description: 'Export your notes to IPFS for decentralized, permanent storage.',
-              color: 'from-tan to-faded-copper',
-              delay: '0.3s',
-            },
-            {
-              icon: Wallet,
-              title: 'Cardano Wallet',
-              description: 'Connect your Cardano wallet and store metadata on the blockchain.',
-              color: 'from-desert-sand to-tan',
-              delay: '0.4s',
-            },
-          ].map((feature, index) => (
-            <div
-              key={index}
-              className="group glass rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 animate-fade-in-up magnetic"
-              style={{ animationDelay: feature.delay }}
-            >
-              <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
-                <feature.icon className="w-8 h-8 text-almond-cream" />
+          <div className='flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide'>
+            {[
+              {
+                icon: <BookOpen className='w-6 h-6 text-blue-600' />,
+                title: 'Rich Text Editor',
+                desc: 'Format your notes with styles and headings.',
+                bg: 'bg-blue-100',
+              },
+              {
+                icon: <Lock className='w-6 h-6 text-purple-600' />,
+                title: 'Secure Storage',
+                desc: 'Encrypted note storage for your privacy.',
+                bg: 'bg-purple-100',
+              },
+              {
+                icon: <Upload className='w-6 h-6 text-green-600' />,
+                title: 'IPFS Integration',
+                desc: 'Store notes permanently on IPFS.',
+                bg: 'bg-green-100',
+              },
+              {
+                icon: <Wallet className='w-6 h-6 text-orange-600' />,
+                title: 'Cardano Wallet',
+                desc: 'Connect wallets & save metadata.',
+                bg: 'bg-orange-100',
+              },
+            ].map((f, i) => (
+              <div
+                key={i}
+                className='min-w-[280px] p-6 bg-white rounded-xl shadow-md snap-center hover:scale-105 hover:shadow-xl transition animate-float'
+                style={{ animationDelay: `${i * 200}ms` }}
+              >
+                <div
+                  className={`w-12 h-12 ${f.bg} rounded-lg flex items-center justify-center mb-4`}
+                >
+                  {f.icon}
+                </div>
+                <h3 className='text-xl font-semibold text-gray-900'>
+                  {f.title}
+                </h3>
+                <p className='text-gray-600'>{f.desc}</p>
               </div>
-              <h3 className="text-2xl font-semibold mb-3 text-coffee-bean group-hover:text-toffee-brown transition-colors">
-                {feature.title}
-              </h3>
-              <p className="text-coffee-bean/80 leading-relaxed">
-                {feature.description}
-              </p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </section>
+      </div>
 
       {/* Footer */}
-      <footer className="relative z-10 container mx-auto px-4 py-12 mt-20 border-t border-coffee-bean/20">
-        <div className="text-center">
-          <p className="text-coffee-bean/70">
-            © 2025 Notes App. Built with Next.js, Express, and Prisma.
-          </p>
-        </div>
+      <footer className='container mx-auto px-4 py-8 mt-20 border-t'>
+        <p className='text-center text-gray-600'>
+          © 2025 Notes App. Built with Next.js, Express, and Prisma.
+        </p>
       </footer>
     </div>
   );
