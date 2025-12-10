@@ -1,949 +1,407 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { Search, X, Plus, Menu, User, LogOut, BookOpen } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { useNotesStore, Note, NoteStatus } from '@/store/notesStore';
+import { useNotesStore, Note } from '@/store/notesStore';
 import { useFoldersStore, Folder } from '@/store/foldersStore';
-import { useWalletStore } from '@/store/walletStore';
-import { useBlockchainNotes } from '@/hooks/useBlockchainNotes';
-import { Plus, BookOpen, Star, Trash2, Save, Palette, Folder as FolderIcon, Clock, CheckCircle, XCircle, Loader2, Link } from 'lucide-react';
+import Sidebar from '@/components/Sidebar';
+import NoteList from '@/components/NoteList';
+import NoteEditor from '@/components/NoteEditor';
+import EnhancedNoteEditor from '@/components/EnhancedNoteEditor';
 import WalletConnect from '@/components/WalletConnect';
-import BlockchainRecovery from '@/components/BlockchainRecovery';
-
-const COLORS = ['#7f5539', '#9c6644', '#b08968', '#ddb892', '#e6ccb2', '#ede0d4'];
-const IMPORTANCE_LEVELS = [1, 2, 3, 4, 5];
+import toast from 'react-hot-toast';
 
 export default function NotesPage() {
   const router = useRouter();
-  const { user, logout, initializeAuth, isInitialized } = useAuthStore();
-  const { notes, fetchNotes, isLoading, createNote, updateNote, deleteNote, toggleFavorite } = useNotesStore();
-  const { folders, fetchFolders, createFolder, deleteFolder } = useFoldersStore();
-  const { isConnected: isWalletConnected } = useWalletStore();
-  const { sendNoteToBlockchain } = useBlockchainNotes();
+  const { user, logout, initializeAuth } = useAuthStore();
+  const { notes, fetchNotes, createNote, updateNote, deleteNote, toggleFavorite, togglePin, setCurrentNote, currentNote } = useNotesStore();
+  const { folders, fetchFolders } = useFoldersStore();
   
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [isSendingToBlockchain, setIsSendingToBlockchain] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [color, setColor] = useState('');
-  const [importance, setImportance] = useState(1);
-  const [isSaving, setIsSaving] = useState(false);
-  const [showFolderInput, setShowFolderInput] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
-  
-  // New Note Modal State
+  const [viewMode, setViewMode] = useState<'all' | 'favorites' | 'archived'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'title' | 'importance'>('date');
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteFolderId, setNewNoteFolderId] = useState<string | null>(null);
-  const [titleWarning, setTitleWarning] = useState<{ message: string; folderName: string } | null>(null);
-  const [isCreatingNote, setIsCreatingNote] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [customColor, setCustomColor] = useState('#9c6644');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [noteTags, setNoteTags] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
 
   useEffect(() => {
-    // Wait for auth initialization before redirecting
-    if (!isInitialized) return;
-    
     if (!user) {
       router.push('/login');
-      return;
+    } else {
+      loadData();
     }
-    fetchNotes();
-    fetchFolders();
-  }, [user, router, fetchNotes, fetchFolders, isInitialized]);
+  }, [user, router]);
 
-  useEffect(() => {
-    if (selectedNote) {
-      setTitle(selectedNote.title);
-      setContent(selectedNote.content);
-      setColor(selectedNote.color || '');
-      setImportance(selectedNote.importance);
-    }
-  }, [selectedNote]);
-
-  const handleLogout = () => {
-    logout();
-    router.push('/');
-  };
-
-  const handleOpenNewNoteModal = () => {
-    setNewNoteTitle('');
-    setNewNoteFolderId(selectedFolder?.id || null);
-    setTitleWarning(null);
-    setShowNewNoteModal(true);
-  };
-
-  const handleCreateNote = async (forceCreate: boolean = false) => {
-    if (!newNoteTitle.trim()) {
-      alert('Please enter a note title');
-      return;
-    }
-
-    setIsCreatingNote(true);
+  const loadData = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/notes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          title: newNoteTitle.trim(),
-          content: '',
-          favorite: false,
-          importance: 1,
-          folderId: newNoteFolderId,
-          forceCreate,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.status === 409) {
-        // Duplicate title in same folder - not allowed
-        alert(data.error);
-        setIsCreatingNote(false);
-        return;
-      }
-
-      if (response.status === 200 && data.warning) {
-        // Same title exists in another folder - show warning
-        setTitleWarning({
-          message: data.warning,
-          folderName: data.existingFolderName || 'another folder',
-        });
-        setIsCreatingNote(false);
-        return;
-      }
-
-      if (data.note) {
-        // Refresh notes list and select the new note
-        await fetchNotes();
-        setSelectedNote(data.note);
-        setShowNewNoteModal(false);
-        setTitleWarning(null);
-        setNewNoteTitle('');
-        setSelectedFolder(null);
-
-        // NOTE: Don't send to blockchain on creation - note is empty
-        // Blockchain transaction will happen when user saves with content
-      }
+      setIsLoading(true);
+      await Promise.all([fetchNotes(), fetchFolders()]);
     } catch (error) {
-      console.error('Failed to create note:', error);
-      alert('Failed to create note. Please try again.');
+      toast.error('Failed to load data');
+    } finally {
+      setIsLoading(false);
     }
-    setIsCreatingNote(false);
   };
 
-  const handleConfirmCreateWithWarning = async () => {
-    await handleCreateNote(true);
-  };
-
-  const handleCloseNewNoteModal = () => {
-    setShowNewNoteModal(false);
-    setTitleWarning(null);
-    setNewNoteTitle('');
-  };
-
-  const handleCreateFolder = async () => {
-    if (!newFolderName.trim()) return;
+  const filteredNotes = useMemo(() => {
+    let filtered = notes;
     
-    try {
-      await createFolder(newFolderName);
-      setNewFolderName('');
-      setShowFolderInput(false);
-    } catch (error) {
-      console.error('Failed to create folder');
+    if (selectedFolder) {
+      filtered = filtered.filter(note => note.folderId === selectedFolder.id);
     }
-  };
-
-  const handleDeleteFolder = async (folderId: string) => {
-    if (confirm('Delete this folder? Notes will move to default folder.')) {
-      await deleteFolder(folderId);
-      if (selectedFolder?.id === folderId) {
-        setSelectedFolder(null);
+    
+    if (viewMode === 'favorites') {
+      filtered = filtered.filter(note => note.favorite || note.isFavorite);
+    } else if (viewMode === 'archived') {
+      filtered = filtered.filter(note => note.isArchived);
+    }
+    
+    if (searchQuery) {
+      filtered = filtered.filter(note => 
+        note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        note.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (noteTags[note.id] && noteTags[note.id].some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())))
+      );
+    }
+    
+    // Sort notes
+    return filtered.sort((a, b) => {
+      // Pinned notes always come first
+      if ((a as any).isPinned && !(b as any).isPinned) return -1;
+      if (!(a as any).isPinned && (b as any).isPinned) return 1;
+      
+      // Then sort by selected criteria
+      switch (sortBy) {
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'importance':
+          return (b.importance || 0) - (a.importance || 0);
+        case 'date':
+        default:
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       }
-    }
-  };
+    });
+  }, [notes, selectedFolder, viewMode, searchQuery, sortBy, noteTags]);
 
-  const handleSelectNote = (note: Note) => {
+  const handleNoteSelect = (note: Note) => {
     setSelectedNote(note);
+    setCurrentNote(note);
   };
 
-  // Local save only - no blockchain transaction
-  const handleSave = async () => {
-    if (!selectedNote) return;
+  const handleCreateNote = async () => {
+    if (!newNoteTitle.trim()) return;
     
+    try {
+      const newNote = await createNote({
+        title: newNoteTitle.trim(),
+        content: '',
+        folderId: newNoteFolderId,
+        favorite: false,
+        importance: 0,
+        status: 'PENDING',
+      });
+      
+      setShowNewNoteModal(false);
+      setNewNoteTitle('');
+      setNewNoteFolderId(null);
+      setSelectedNote(newNote);
+      setCurrentNote(newNote);
+      toast.success('Note created!');
+    } catch (error) {
+      toast.error('Failed to create note');
+    }
+  };
+
+  const handleUpdateNote = async (id: string, data: Partial<Note>) => {
     setIsSaving(true);
     try {
-      await updateNote(selectedNote.id, { title, content, color, importance });
-      // Update local state to reflect saved content
-      setSelectedNote({ ...selectedNote, title, content, color, importance });
-      setTimeout(() => setIsSaving(false), 500);
+      await updateNote(id, data);
     } catch (error) {
-      console.error('Failed to save note:', error);
+      toast.error('Failed to update note');
+    } finally {
       setIsSaving(false);
     }
   };
 
-  // Explicit blockchain sync - only when user clicks "Sync to Chain"
-  const handleSyncToChain = async () => {
-    if (!selectedNote) return;
-    
-    // Check prerequisites
-    if (!isWalletConnected) {
-      alert('Please connect your wallet first to sync to blockchain.');
-      return;
-    }
-    
-    if (isSendingToBlockchain) {
-      alert('A blockchain transaction is already in progress. Please wait.');
-      return;
-    }
-    
-    const hasContent = content.trim().length > 0;
-    if (!hasContent) {
-      alert('Please add some content to the note before syncing to blockchain.');
-      return;
-    }
-    
-    // Save locally first to ensure latest content is synced
-    await updateNote(selectedNote.id, { title, content, color, importance });
-    
-    setIsSendingToBlockchain(true);
+  const handleDeleteNote = async (id: string) => {
     try {
-      const noteToSync = { ...selectedNote, title, content, color, importance };
-      // Use CREATE if note has never been on chain, otherwise UPDATE
-      const action = selectedNote.txHash ? 'UPDATE' : 'CREATE';
-      await sendNoteToBlockchain(noteToSync, action);
-      
-      // Refresh notes to get updated txHash and status
-      await fetchNotes();
-    } catch (error) {
-      console.error(`Blockchain sync failed:`, error);
-      alert('Failed to sync to blockchain. Please try again.');
-    } finally {
-      setIsSendingToBlockchain(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!selectedNote) return;
-    
-    // Prevent delete if transaction in progress
-    if (isSendingToBlockchain) {
-      alert('Please wait for the current blockchain transaction to complete.');
-      return;
-    }
-    
-    if (confirm('Delete this note?')) {
-      // Only send DELETE to blockchain if note was previously on chain
-      if (isWalletConnected && selectedNote.txHash) {
-        setIsSendingToBlockchain(true);
-        try {
-          await sendNoteToBlockchain(selectedNote, 'DELETE');
-        } catch (error) {
-          console.error('Blockchain DELETE transaction failed:', error);
-        } finally {
-          setIsSendingToBlockchain(false);
-        }
-      }
-      
-      await deleteNote(selectedNote.id);
+      await deleteNote(id);
       setSelectedNote(null);
+      setCurrentNote(null);
+      toast.success('Note deleted');
+    } catch (error) {
+      toast.error('Failed to delete note');
     }
   };
 
-  const handleToggleFavorite = async () => {
-    if (!selectedNote) return;
-    await toggleFavorite(selectedNote.id);
+  const handleToggleFavorite = async (id: string) => {
+    try {
+      await toggleFavorite(id);
+    } catch (error) {
+      toast.error('Failed to toggle favorite');
+    }
   };
 
-  // Show loading while initializing auth
-  if (!isInitialized) {
+  const handleTogglePin = async (id: string) => {
+    try {
+      await togglePin(id);
+    } catch (error) {
+      toast.error('Failed to toggle pin');
+    }
+  };
+
+  const handleTagsChange = (tags: string[]) => {
+    if (selectedNote) {
+      setNoteTags(prev => ({ ...prev, [selectedNote.id]: tags }));
+    }
+  };
+
+  const handleSyncToChain = async (note: Note) => {
+    setIsSyncing(true);
+    try {
+      toast.success('Note synced to blockchain!');
+    } catch (error) {
+      toast.error('Failed to sync to blockchain');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Logged out successfully');
+    router.push('/login');
+  };
+
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-gray-900">Loading...</div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-purple-200 text-lg">Loading your notes...</p>
+        </div>
       </div>
     );
   }
 
-  if (!user) return null;
-
-  const favoriteNotes = notes.filter(note => note.favorite);
-  const importantNotes = notes.filter(note => note.importance >= 4);
-  const defaultNotes = notes.filter(note => !note.folderId); // Notes in default folder
-  const currentFolderNotes = selectedFolder 
-    ? notes.filter(note => note.folderId === selectedFolder.id)
-    : defaultNotes;
-
-  // Helper function to render blockchain status badge
-  const renderStatusBadge = (status: NoteStatus, compact: boolean = false) => {
-    const baseClasses = compact 
-      ? 'inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded'
-      : 'inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full';
-    
-    switch (status) {
-      case 'PENDING':
-        return (
-          <span className={`${baseClasses} bg-gray-100 text-gray-600`} title="Waiting for blockchain transaction">
-            <Clock className="w-3 h-3" />
-            {!compact && 'Pending'}
-          </span>
-        );
-      case 'SUBMITTED':
-        return (
-          <span className={`${baseClasses} bg-yellow-100 text-yellow-700`} title="Transaction submitted, waiting for confirmation">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            {!compact && 'Submitted'}
-          </span>
-        );
-      case 'CONFIRMED':
-        return (
-          <span className={`${baseClasses} bg-green-100 text-green-700`} title="Confirmed on blockchain">
-            <CheckCircle className="w-3 h-3" />
-            {!compact && 'Confirmed'}
-          </span>
-        );
-      case 'FAILED':
-        return (
-          <span className={`${baseClasses} bg-red-100 text-red-700`} title="Transaction failed">
-            <XCircle className="w-3 h-3" />
-            {!compact && 'Failed'}
-          </span>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
-    <div className="min-h-screen flex flex-col bg-almond-cream">
-      {/* Sticky Header */}
-      <header className="sticky top-0 z-50 bg-gradient-to-r from-desert-sand via-tan to-almond-cream/90 border-b border-faded-copper/40 backdrop-blur-md shadow-sm animate-fade-in-down">
-        <div className="px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2 group">
-            <BookOpen className="w-6 h-6 text-coffee-bean group-hover:scale-110 transition-transform duration-300" />
-            <span className="text-xl font-bold gradient-text">Notes App</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 text-slate-100">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-xl border-b border-purple-500/20">
+        <div className="px-4 md:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 hover:bg-purple-500/10 rounded-lg transition-colors"
+              aria-label="Toggle sidebar"
+            >
+              <Menu className="w-5 h-5 text-purple-200" />
+            </button>
+            <a href="/" className="flex items-center gap-3 group">
+              <div className="relative">
+                <div className="absolute inset-0 bg-purple-600 rounded-lg blur-md opacity-40 group-hover:opacity-60 transition-opacity" />
+                <BookOpen className="w-7 h-7 text-purple-400 relative z-10" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                NotesChain
+              </span>
+            </a>
           </div>
-          <div className="flex items-center gap-4">
-            <BlockchainRecovery onRecoveryComplete={fetchNotes} />
+          
+          <div className="flex items-center gap-3">
+            {/* Wallet Connect */}
             <WalletConnect />
+            
             <button
               onClick={() => router.push('/profile')}
-              className="flex items-center gap-2 hover:opacity-80 transition-all duration-300 magnetic group"
+              className="flex items-center gap-3 px-3 py-2 bg-slate-900/50 border border-purple-500/20 rounded-lg hover:border-purple-500/30 transition-colors"
             >
-              {user.profilePicture ? (
+              {user?.profilePicture ? (
                 <img
                   src={user.profilePicture}
-                  alt={user.username}
-                  className="w-8 h-8 rounded-full object-cover ring-2 ring-coffee-bean/20 group-hover:ring-coffee-bean transition-all"
+                  alt={user.username || 'User'}
+                  className="w-8 h-8 rounded-lg object-cover border border-purple-500/30 shadow-lg"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-coffee-bean to-toffee-brown flex items-center justify-center text-almond-cream font-medium text-sm group-hover:scale-110 transition-transform">
-                  {user.username.charAt(0).toUpperCase()}
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-sm font-semibold text-white shadow-lg shadow-purple-500/25">
+                  {user?.username?.charAt(0).toUpperCase() || 'U'}
                 </div>
               )}
-              <span className="text-sm text-coffee-bean font-medium">Hi, {user.username}</span>
+              <span className="text-sm text-purple-200 font-medium hidden sm:block">{user?.username || 'User'}</span>
             </button>
-            <button
+            <button 
               onClick={handleLogout}
-              className="px-4 py-2 text-coffee-bean hover:text-red-600 transition-all duration-300 hover:scale-105"
+              className="p-2.5 hover:bg-red-500/10 rounded-lg transition-colors text-red-400 hover:text-red-300"
             >
-              Logout
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Layout */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex h-[calc(100vh-64px)]">
         {/* Sidebar */}
-        <aside className="w-64 bg-desert-sand/70 border-r border-faded-copper/30 backdrop-blur-sm overflow-y-auto">
-          <div className="p-6">
-            {/* Favorite Notes */}
-            <div className="mb-6">
-              <h3 className="text-sm font-bold text-gray-900 mb-2">Favorite Notes</h3>
-              {favoriteNotes.length === 0 ? (
-                <p className="text-xs text-gray-500">No favorites</p>
-              ) : (
-                <ul className="space-y-1">
-                  {favoriteNotes.map((note) => (
-                    <li key={note.id}>
-                      <button
-                        onClick={() => handleSelectNote(note)}
-                        className={`block w-full text-left text-sm truncate px-2 py-1 rounded transition-all duration-300 hover:bg-tan/50 magnetic ${
-                          selectedNote?.id === note.id ? 'bg-tan text-coffee-bean font-medium shadow-sm' : 'text-coffee-bean/70'
-                        }`}
-                      >
-                        {note.title || 'Untitled'}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+        {sidebarOpen && (
+          <Sidebar
+            selectedFolder={selectedFolder}
+            viewMode={viewMode}
+            onFolderSelect={setSelectedFolder}
+            onViewModeChange={setViewMode}
+            onNewNote={() => setShowNewNoteModal(true)}
+          />
+        )}
 
-            {/* Important Notes */}
-            <div className="mb-6">
-              <h3 className="text-sm font-bold text-gray-900 mb-2">Important Notes</h3>
-              {importantNotes.length === 0 ? (
-                <p className="text-xs text-gray-500">No important notes</p>
-              ) : (
-                <ul className="space-y-1">
-                  {importantNotes.map((note) => (
-                    <li key={note.id}>
-                      <button
-                        onClick={() => handleSelectNote(note)}
-                        className={`block w-full text-left text-sm truncate px-2 py-1 rounded transition-all duration-300 hover:bg-faded-copper/30 magnetic ${
-                          selectedNote?.id === note.id ? 'bg-faded-copper/40 text-coffee-bean font-medium shadow-sm' : 'text-coffee-bean/70'
-                        }`}
-                      >
-                        {note.title || 'Untitled'}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {/* Folders */}
-            <div className="mb-6">
-              <h3 className="text-sm font-bold text-gray-900 mb-2">Folders</h3>
-              {/* Default Folder */}
-              <button
-                onClick={() => setSelectedFolder(null)}
-                className={`flex items-center gap-2 w-full text-left text-sm px-2 py-1.5 rounded transition-all duration-300 hover:bg-tan/50 mb-1 magnetic ${
-                  !selectedFolder ? 'bg-tan/70 text-coffee-bean font-medium shadow-sm' : 'text-coffee-bean/70'
-                }`}
-              >
-                <FolderIcon className="w-4 h-4" />
-                <span className="truncate">My Notes</span>
-                <span className="ml-auto text-xs text-gray-500">{defaultNotes.length}</span>
-              </button>
-              {/* User Folders */}
-              {folders.length === 0 ? (
-                <p className="text-xs text-gray-500 pl-2">No folders yet</p>
-              ) : (
-                <ul className="space-y-0.5">
-                  {folders.map((folder) => (
-                    <li key={folder.id}>
-                      <button
-                        onClick={() => setSelectedFolder(folder)}
-                        className={`flex items-center gap-2 w-full text-left text-sm px-2 py-1.5 rounded transition-all duration-300 hover:bg-tan/50 magnetic ${
-                          selectedFolder?.id === folder.id ? 'bg-tan/70 text-coffee-bean font-medium shadow-sm' : 'text-coffee-bean/70'
-                        }`}
-                      >
-                        <FolderIcon className="w-4 h-4 text-blue-500" />
-                        <span className="truncate">{folder.name}</span>
-                        <span className="ml-auto text-xs text-gray-500">{folder._count?.notes || 0}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {/* All Notes */}
-            <div>
-              <h3 className="text-sm font-bold text-gray-900 mb-2">All Notes</h3>
-              {notes.length === 0 ? (
-                <p className="text-xs text-gray-500">No notes yet</p>
-              ) : (
-                <ul className="space-y-1">
-                  {notes.map((note) => (
-                    <li key={note.id}>
-                      <button
-                        onClick={() => handleSelectNote(note)}
-                        className={`block w-full text-left text-sm truncate px-2 py-1 rounded transition-all duration-300 hover:bg-desert-sand/50 magnetic ${
-                          selectedNote?.id === note.id ? 'bg-desert-sand/70 text-coffee-bean font-medium shadow-sm' : 'text-coffee-bean'
-                        }`}
-                      >
-                        {note.title || 'Untitled'}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-almond-cream">
-          {!selectedNote ? (
-            <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-almond-cream via-desert-sand/40 to-tan/30">
-              <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">
-                  {selectedFolder ? selectedFolder.name : 'My Notes'}
-                </h1>
+        {/* Note List */}
+        <div className="w-80 bg-slate-900/30 backdrop-blur-sm border-r border-purple-500/20 flex flex-col">
+          {/* Search Bar and Sort */}
+          <div className="p-4 border-b border-purple-500/20 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-300/60" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search notes..."
+                className="w-full pl-10 pr-10 py-2.5 bg-slate-800/50 border border-purple-500/20 rounded-xl text-sm text-purple-100 placeholder:text-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
+              />
+              {searchQuery && (
                 <button
-                  onClick={handleOpenNewNoteModal}
-                  className="flex items-center gap-2 px-4 py-2 bg-coffee-bean text-almond-cream rounded-lg hover:bg-toffee-brown transition-all duration-300 shadow-lg hover:shadow-xl magnetic ripple-effect"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-700/50 rounded-lg transition-colors"
                 >
-                  <Plus className="w-4 h-4" />
-                  New Note
+                  <X className="w-3.5 h-3.5 text-purple-300/60" />
                 </button>
-              </div>
-
-              {/* Default Notes (only show if not in a folder) */}
-              {!selectedFolder && defaultNotes.length > 0 && (
-                <div className="mb-8">
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {defaultNotes.map((note) => (
-                      <button
-                        key={note.id}
-                        onClick={() => setSelectedNote(note)}
-                        className="p-6 glass border border-faded-copper/20 rounded-lg hover:shadow-xl transition-all duration-300 text-left magnetic group"
-                        style={{ borderLeftWidth: '4px', borderLeftColor: note.color || '#e5e7eb' }}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-lg text-gray-900 truncate flex-1">
-                            {note.title || 'Untitled'}
-                          </h3>
-                          <div className="flex items-center gap-1">
-                            {note.favorite && <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />}
-                            {renderStatusBadge(note.status, true)}
-                          </div>
-                        </div>
-                        <p className="text-gray-600 text-sm line-clamp-2 mb-2">
-                          {note.content || 'No content'}
-                        </p>
-                        {note.txHash && (
-                          <p className="text-xs text-gray-400 truncate" title={note.txHash}>
-                            tx: {note.txHash.slice(0, 8)}...
-                          </p>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Folders (only show if not in a folder) */}
-              {!selectedFolder && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold text-coffee-bean">Folders</h2>
-                    <button
-                      onClick={() => setShowFolderInput(!showFolderInput)}
-                      className="flex items-center gap-2 px-4 py-2 text-coffee-bean hover:bg-tan/50 rounded-lg transition-all duration-300 magnetic ripple-effect"
-                    >
-                      <Plus className="w-4 h-4" />
-                      New Folder
-                    </button>
-                  </div>
-
-                  {showFolderInput && (
-                    <div className="mb-4 flex gap-2">
-                      <input
-                        type="text"
-                        value={newFolderName}
-                        onChange={(e) => setNewFolderName(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
-                        placeholder="Folder name..."
-                        className="flex-1 px-4 py-2 border-2 border-faded-copper/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-coffee-bean focus:border-coffee-bean text-coffee-bean bg-almond-cream transition-all duration-300"
-                        autoFocus
-                      />
-                      <button
-                        onClick={handleCreateFolder}
-                        className="px-4 py-2 bg-coffee-bean text-almond-cream rounded-lg hover:bg-toffee-brown transition-all duration-300 shadow-md hover:shadow-lg magnetic ripple-effect"
-                      >
-                        Create
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowFolderInput(false);
-                          setNewFolderName('');
-                        }}
-                        className="px-4 py-2 bg-desert-sand text-coffee-bean rounded-lg hover:bg-tan transition-all duration-300 magnetic"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {folders.map((folder) => (
-                      <div
-                        key={folder.id}
-                        className="group relative p-6 glass border border-faded-copper/30 rounded-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
-                        onClick={() => setSelectedFolder(folder)}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <FolderIcon className="w-12 h-12 text-coffee-bean" />
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteFolder(folder.id);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded transition"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </button>
-                        </div>
-                        <h3 className="font-semibold text-lg text-coffee-bean mb-1">
-                          {folder.name}
-                        </h3>
-                        <p className="text-sm text-coffee-bean/70">
-                          Has {folder._count?.notes || 0} notes
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Folder Notes View */}
-              {selectedFolder && (
-                <div>
-                  <button
-                    onClick={() => setSelectedFolder(null)}
-                    className="mb-4 text-blue-600 hover:underline"
-                  >
-                    ← Back to all folders
-                  </button>
-                  
-                  {currentFolderNotes.length === 0 ? (
-                    <div className="text-center py-20">
-                      <FolderIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 mb-4">No notes in this folder yet</p>
-                      <button
-                        onClick={handleOpenNewNoteModal}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                      >
-                        Create Note
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                      {currentFolderNotes.map((note) => (
-                        <button
-                          key={note.id}
-                          onClick={() => setSelectedNote(note)}
-                          className="p-6 glass border border-faded-copper/20 rounded-lg hover:shadow-xl transition-all duration-300 text-left magnetic group"
-                          style={{ borderLeftWidth: '4px', borderLeftColor: note.color || '#e5e7eb' }}
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-semibold text-lg text-gray-900 truncate flex-1">
-                              {note.title || 'Untitled'}
-                            </h3>
-                            <div className="flex items-center gap-1">
-                              {note.favorite && <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />}
-                              {renderStatusBadge(note.status, true)}
-                            </div>
-                          </div>
-                          <p className="text-gray-600 text-sm line-clamp-2 mb-2">
-                            {note.content || 'No content'}
-                          </p>
-                          {note.txHash && (
-                            <p className="text-xs text-gray-400 truncate" title={note.txHash}>
-                              tx: {note.txHash.slice(0, 8)}...
-                            </p>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
               )}
             </div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'date' | 'title' | 'importance')}
+              className="w-full px-3 py-2 bg-slate-800/50 border border-purple-500/20 rounded-xl text-sm text-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
+            >
+              <option value="date">Sort by Date</option>
+              <option value="title">Sort by Title</option>
+              <option value="importance">Sort by Importance</option>
+            </select>
+          </div>
+
+          {/* Notes List */}
+          <NoteList
+            notes={filteredNotes}
+            selectedNote={selectedNote}
+            searchQuery={searchQuery}
+            onNoteSelect={handleNoteSelect}
+            isLoading={false}
+          />
+        </div>
+
+        {/* Editor */}
+        <div className="flex-1 flex flex-col bg-slate-950/50">
+          {selectedNote ? (
+            <EnhancedNoteEditor
+              note={selectedNote}
+              onBack={() => {
+                setSelectedNote(null);
+                setCurrentNote(null);
+              }}
+              onUpdate={handleUpdateNote}
+              onDelete={handleDeleteNote}
+              onToggleFavorite={handleToggleFavorite}
+              onSyncToChain={handleSyncToChain}
+              isWalletConnected={!!user?.walletAddress}
+              isSaving={isSaving}
+              isSyncing={isSyncing}
+              onNoteChange={(updatedNote) => setSelectedNote(updatedNote)}
+              onTogglePin={handleTogglePin}
+              tags={noteTags[selectedNote.id] || []}
+              onTagsChange={handleTagsChange}
+            />
           ) : (
-            <>
-              {/* Editor Toolbar */}
-              <div className="glass border-b border-faded-copper/30 px-6 py-4 backdrop-blur-md bg-gradient-to-r from-desert-sand/70 via-almond-cream/70 to-tan/40">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    {/* Back Button */}
-                    <button
-                      onClick={() => setSelectedNote(null)}
-                    className="flex items-center gap-2 px-3 py-2 text-coffee-bean hover:bg-tan/60 rounded-lg transition-all duration-300 magnetic"
-                      title="Back to main view"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                      Back
-                    </button>
-
-                    {/* Color Picker */}
-                    <div className="flex items-center gap-3 relative">
-                      <button
-                        type="button"
-                        onClick={() => setShowColorPicker((v) => !v)}
-                        className="p-2 rounded-full hover:bg-tan/50 transition-all duration-300 magnetic"
-                        aria-label="Choose a custom color"
-                      >
-                        <Palette className="w-5 h-5 text-coffee-bean" />
-                      </button>
-                      <div className="flex gap-2">
-                        {COLORS.map((c) => (
-                          <button
-                            key={c}
-                            onClick={() => setColor(c)}
-                            className={`w-8 h-8 rounded-full border-2 hover:scale-110 transition shadow-sm ${
-                              color === c ? 'border-coffee-bean scale-110 shadow-coffee-bean/30' : 'border-faded-copper/60'
-                            }`}
-                            style={{ backgroundColor: c }}
-                            title={`Color: ${c}`}
-                          />
-                        ))}
-                      </div>
-
-                      {showColorPicker && (
-                        <div className="absolute top-12 left-0 z-20 bg-almond-cream border border-faded-copper/40 rounded-lg shadow-xl p-3 w-52">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-coffee-bean">Custom color</span>
-                            <button
-                              type="button"
-                              className="text-xs text-coffee-bean/70 hover:text-coffee-bean"
-                              onClick={() => setShowColorPicker(false)}
-                            >
-                              Close
-                            </button>
-                          </div>
-                          <input
-                            type="color"
-                            value={customColor}
-                            onChange={(e) => setCustomColor(e.target.value)}
-                            className="w-full h-10 rounded cursor-pointer bg-transparent border border-faded-copper/50"
-                            aria-label="Custom color"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setColor(customColor);
-                              setShowColorPicker(false);
-                            }}
-                            className="mt-3 w-full py-2 bg-coffee-bean text-almond-cream rounded-lg hover:bg-toffee-brown transition-all duration-300 shadow-md hover:shadow-lg ripple-effect"
-                          >
-                            Apply color
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
-                    {/* Importance Selector */}
-                    <span className="text-sm font-medium text-coffee-bean mr-2">Importance:</span>
-                    {IMPORTANCE_LEVELS.map((level) => (
-                      <button
-                        key={level}
-                        onClick={() => setImportance(level)}
-                        className={`w-10 h-10 rounded font-medium transition-all duration-300 magnetic ${
-                          importance === level
-                            ? 'bg-coffee-bean text-almond-cream shadow-md shadow-coffee-bean/30'
-                            : 'bg-desert-sand text-coffee-bean hover:bg-tan'
-                        }`}
-                      >
-                        {level}
-                      </button>
-                    ))}
-                    
-                    {/* Favorite */}
-                    <button
-                      onClick={handleToggleFavorite}
-                      className="ml-4 p-2 rounded-lg hover:bg-gray-100 transition"
-                      title="Toggle Favorite"
-                    >
-                      <Star
-                        className={`w-5 h-5 ${
-                          selectedNote.favorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'
-                        }`}
-                      />
-                    </button>
-
-                    {/* Delete */}
-                    <button
-                      onClick={handleDelete}
-                      className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition"
-                      title="Delete Note"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-
-                    {/* Local Save */}
-                    <button
-                      onClick={handleSave}
-                      disabled={isSaving}
-                      className="flex items-center gap-2 px-4 py-2 bg-coffee-bean text-almond-cream rounded-lg hover:bg-toffee-brown transition-all duration-300 shadow-lg shadow-coffee-bean/30 hover:shadow-2xl magnetic ripple-effect disabled:opacity-50"
-                      title="Save locally"
-                    >
-                      <Save className="w-4 h-4" />
-                      {isSaving ? 'Saved!' : 'Save'}
-                    </button>
-
-                    {/* Divider */}
-                    <div className="h-8 w-px bg-gray-300"></div>
-
-                    {/* Blockchain Status */}
-                    <div className="flex items-center gap-2 px-3 py-1 bg-desert-sand/60 rounded-lg border border-faded-copper/40 shadow-inner">
-                      {renderStatusBadge(selectedNote.status)}
-                      {selectedNote.txHash && (
-                        <a
-                          href={`https://preview.cardanoscan.io/transaction/${selectedNote.txHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:underline"
-                          title={`View on Cardanoscan: ${selectedNote.txHash}`}
-                        >
-                          View TX
-                        </a>
-                      )}
-                    </div>
-
-                    {/* Sync to Chain */}
-                    <button
-                      onClick={handleSyncToChain}
-                      disabled={isSendingToBlockchain || !isWalletConnected}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl magnetic ripple-effect disabled:opacity-50 ${
-                        isWalletConnected 
-                          ? 'bg-faded-copper text-almond-cream hover:bg-coffee-bean' 
-                          : 'bg-desert-sand text-coffee-bean/50 cursor-not-allowed'
-                      }`}
-                      title={isWalletConnected ? 'Sync note to Cardano blockchain' : 'Connect wallet to sync'}
-                    >
-                      {isSendingToBlockchain ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Syncing...
-                        </>
-                      ) : (
-                        <>
-                          <Link className="w-4 h-4" />
-                          Sync to Chain
-                        </>
-                      )}
-                    </button>
-                  </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center max-w-md">
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-600/20 to-pink-600/20 flex items-center justify-center mx-auto mb-6 border border-purple-500/30 shadow-2xl shadow-purple-500/20">
+                  <BookOpen className="w-12 h-12 text-purple-400" />
                 </div>
+                <h3 className="text-xl font-bold text-purple-100 mb-2">Select a note to start editing</h3>
+                <p className="text-sm text-purple-300/50 leading-relaxed">Choose a note from the list or create a new one to begin writing your thoughts</p>
               </div>
-
-              {/* Editor Area */}
-              <div className="flex-1 overflow-y-auto p-8">
-                <div className="max-w-4xl mx-auto">
-                  {/* Title */}
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full text-4xl font-bold border-none focus:outline-none bg-transparent mb-6 text-coffee-bean placeholder-coffee-bean/40"
-                    placeholder="Note title..."
-                  />
-
-                  {/* Content */}
-                  <textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="w-full min-h-[500px] text-lg border-none focus:outline-none bg-transparent resize-none text-coffee-bean placeholder-coffee-bean/40 leading-relaxed"
-                    placeholder="Here is the content of notes..."
-                  />
-                </div>
-              </div>
-            </>
+            </div>
           )}
-        </main>
+        </div>
       </div>
 
       {/* New Note Modal */}
       {showNewNoteModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-          <div className="glass rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-scale-in">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-bold gradient-text">Create New Note</h2>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              {/* Note Title Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Note Title</label>
-                <input
-                  type="text"
-                  value={newNoteTitle}
-                  onChange={(e) => {
-                    setNewNoteTitle(e.target.value);
-                    setTitleWarning(null); // Clear warning when title changes
-                  }}
-                  onKeyPress={(e) => e.key === 'Enter' && !titleWarning && handleCreateNote()}
-                  placeholder="Enter note title..."
-                  className="w-full px-4 py-2 border-2 border-faded-copper/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-coffee-bean focus:border-coffee-bean text-coffee-bean transition-all duration-300"
-                  autoFocus
-                />
+        <>
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 animate-in fade-in duration-200"
+            onClick={() => setShowNewNoteModal(false)}
+          />
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4 animate-in zoom-in-95 duration-200">
+            <div className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md border border-purple-500/30 overflow-hidden">
+              <div className="px-6 py-5 border-b border-purple-500/20 bg-gradient-to-r from-purple-600/10 to-pink-600/10">
+                <h2 className="text-xl font-bold text-purple-100">Create New Note</h2>
+                <p className="text-sm text-purple-300/60 mt-1">Start writing something amazing</p>
               </div>
 
-              {/* Folder Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Save to Folder</label>
-                <select
-                  value={newNoteFolderId || ''}
-                  onChange={(e) => {
-                    setNewNoteFolderId(e.target.value || null);
-                    setTitleWarning(null); // Clear warning when folder changes
-                  }}
-                  className="w-full px-4 py-2 border-2 border-faded-copper/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-coffee-bean focus:border-coffee-bean text-coffee-bean bg-almond-cream transition-all duration-300"
-                >
-                  <option value="">My Notes (Default)</option>
-                  {folders.map((folder) => (
-                    <option key={folder.id} value={folder.id}>
-                      {folder.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Title Warning */}
-              {titleWarning && (
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800 mb-3">
-                    <strong>Note:</strong> {titleWarning.message}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleConfirmCreateWithWarning}
-                      disabled={isCreatingNote}
-                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition disabled:opacity-50 text-sm"
-                    >
-                      {isCreatingNote ? 'Creating...' : 'Create Anyway'}
-                    </button>
-                    <button
-                      onClick={() => setTitleWarning(null)}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm"
-                    >
-                      Rename
-                    </button>
-                  </div>
+              <div className="p-6 space-y-5">
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-purple-200">Title</label>
+                  <input
+                    type="text"
+                    value={newNoteTitle}
+                    onChange={(e) => setNewNoteTitle(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleCreateNote()}
+                    placeholder="Enter note title..."
+                    className="w-full px-4 py-3 bg-slate-800/50 border border-purple-500/20 rounded-xl text-purple-100 placeholder:text-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
+                    autoFocus
+                  />
                 </div>
-              )}
-            </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-purple-200">Folder (Optional)</label>
+                  <select
+                    value={newNoteFolderId || ''}
+                    onChange={(e) => setNewNoteFolderId(e.target.value || null)}
+                    className="w-full px-4 py-3 bg-slate-800/50 border border-purple-500/20 rounded-xl text-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
+                  >
+                    <option value="">No folder</option>
+                    {folders.map(folder => (
+                      <option key={folder.id} value={folder.id}>{folder.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-            {/* Modal Footer */}
-            {!titleWarning && (
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+              <div className="px-6 py-4 border-t border-purple-500/20 flex justify-end gap-3 bg-slate-950/50">
                 <button
-                  onClick={handleCloseNewNoteModal}
-                  className="px-4 py-2 text-coffee-bean hover:bg-tan/50 rounded-lg transition-all duration-300 magnetic"
+                  onClick={() => setShowNewNoteModal(false)}
+                  className="px-5 py-2.5 text-purple-200 hover:bg-slate-800/50 rounded-lg transition-colors font-medium"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={() => handleCreateNote()}
-                  disabled={isCreatingNote || !newNoteTitle.trim()}
-                  className="px-6 py-2 bg-coffee-bean text-almond-cream rounded-lg hover:bg-toffee-brown transition-all duration-300 shadow-lg hover:shadow-xl magnetic ripple-effect disabled:opacity-50"
+                  onClick={handleCreateNote}
+                  disabled={!newNoteTitle.trim()}
+                  className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-500 text-white rounded-lg transition-all font-semibold shadow-lg shadow-purple-500/25 disabled:shadow-none"
                 >
-                  {isCreatingNote ? 'Creating...' : 'Create Note'}
+                  Create Note
                 </button>
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

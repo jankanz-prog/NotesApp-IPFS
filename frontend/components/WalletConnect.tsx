@@ -7,18 +7,16 @@ import { useTransactionStatus } from '@/hooks/useTransactionStatus';
 import { Wallet, ChevronDown, LogOut, Copy, Check, AlertTriangle, Link, Unlink, Send, History, AlertCircle, Download, X } from 'lucide-react';
 import SendAdaModal from './SendAdaModal';
 import TransactionHistory from './TransactionHistory';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function WalletConnect() {
   const {
-    availableWallets,
-    selectedWallet,
     walletAddressBech32,
     balanceAda,
     isConnecting,
     isConnected,
     error,
-    detectWallets,
-    selectWallet,
+    detectLaceWallet,
     connectWallet,
     disconnectWallet,
     clearError,
@@ -39,10 +37,23 @@ export default function WalletConnect() {
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [showNoWalletModal, setShowNoWalletModal] = useState(false);
 
+  const [isLaceAvailable, setIsLaceAvailable] = useState(false);
+
   useEffect(() => {
-    // Detect wallets on mount (client-side only)
-    detectWallets();
-  }, [detectWallets]);
+    // Auto-detect Lace wallet on mount (client-side only)
+    const checkWallet = () => {
+      const available = detectLaceWallet();
+      setIsLaceAvailable(available);
+    };
+    
+    // Check immediately
+    checkWallet();
+    
+    // Also check after a short delay (wallet might load after page)
+    const timer = setTimeout(checkWallet, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [detectLaceWallet]);
 
   const handleCopyAddress = () => {
     if (walletAddressBech32) {
@@ -61,110 +72,121 @@ export default function WalletConnect() {
   if (isConnected && walletAddressBech32) {
     return (
       <div className="relative">
-        <button
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => setShowDropdown(!showDropdown)}
-          className="flex items-center gap-2 px-3 py-2 bg-tan/50 border border-faded-copper/30 rounded-lg hover:bg-tan transition-all duration-300 magnetic"
+          className="flex items-center gap-2 px-3 py-2 glass-light border border-mauve/20 rounded-xl hover:border-mauve/40 transition-all duration-200"
         >
-          <Wallet className="w-4 h-4 text-green-600" />
+          <Wallet className="w-4 h-4 text-green-400" />
           <div className="flex flex-col items-start">
-            <span className="text-sm font-medium text-green-700">
+            <span className="text-sm font-medium text-mauve">
               {balanceAda ? `${balanceAda} ₳` : '...'}
             </span>
-            <span className="text-xs text-green-600">
+            <span className="text-xs text-mauve/70">
               {formatAddress(walletAddressBech32)}
             </span>
           </div>
-          <ChevronDown className="w-4 h-4 text-green-600" />
-        </button>
+          <ChevronDown className="w-4 h-4 text-mauve/60" />
+        </motion.button>
 
-        {showDropdown && (
-          <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-            {/* Balance Section */}
-            <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
-              <p className="text-xs text-gray-500 mb-1">Balance</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {balanceAda || '0.00'} <span className="text-lg">₳</span>
-              </p>
-            </div>
-            
-            {/* Address Section */}
-            <div className="p-3 border-b border-gray-100">
-              <p className="text-xs text-gray-500 mb-1">Wallet Address</p>
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-mono text-gray-700 truncate flex-1">
-                  {walletAddressBech32}
+        <AnimatePresence>
+          {showDropdown && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute right-0 mt-2 w-80 glass-dark border border-mauve/20 rounded-xl shadow-xl z-50"
+            >
+              {/* Balance Section */}
+              <div className="p-4 border-b border-mauve/20 bg-gradient-to-r from-green-500/10 to-emerald-500/10">
+                <p className="text-xs text-mauve/60 mb-1">Balance</p>
+                <p className="text-2xl font-bold text-mauve">
+                  {balanceAda || '0.00'} <span className="text-lg">₳</span>
                 </p>
-                <button
-                  onClick={handleCopyAddress}
-                  className="p-1 hover:bg-gray-100 rounded"
-                  title="Copy address"
-                >
-                  {copied ? (
-                    <Check className="w-4 h-4 text-green-600" />
-                  ) : (
-                    <Copy className="w-4 h-4 text-gray-400" />
-                  )}
-                </button>
               </div>
-            </div>
-            
-            {/* Network Badge */}
-            <div className="px-3 py-2 border-b border-gray-100">
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                Preview Network
-              </span>
-            </div>
-            
-            {/* Send ADA Button */}
-            <button
-              onClick={() => {
-                setShowDropdown(false);
-                setShowSendModal(true);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-purple-600 hover:bg-purple-50 transition"
-            >
-              <Send className="w-4 h-4" />
-              <span className="text-sm">Send ADA</span>
-            </button>
-            
-            {/* Transaction History Button */}
-            <button
-              onClick={() => {
-                setShowDropdown(false);
-                setShowHistoryModal(true);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-50 transition"
-            >
-              <History className="w-4 h-4" />
-              <span className="text-sm">Transaction History</span>
-            </button>
-
-            {/* Unlink Wallet Button - only show if wallet is linked to account */}
-            {user?.walletAddress && (
+              
+              {/* Address Section */}
+              <div className="p-3 border-b border-mauve/20">
+                <p className="text-xs text-mauve/60 mb-1">Wallet Address</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-mono text-mauve truncate flex-1">
+                    {walletAddressBech32}
+                  </p>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={handleCopyAddress}
+                    className="p-1 hover:bg-mauve/10 rounded transition-colors"
+                    title="Copy address"
+                  >
+                    {copied ? (
+                      <Check className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <Copy className="w-4 h-4 text-mauve/60" />
+                    )}
+                  </motion.button>
+                </div>
+              </div>
+              
+              {/* Network Badge */}
+              <div className="px-3 py-2 border-b border-mauve/20">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                  Preview Network
+                </span>
+              </div>
+              
+              {/* Send ADA Button */}
               <button
                 onClick={() => {
                   setShowDropdown(false);
-                  setShowUnlinkConfirm(true);
+                  setShowSendModal(true);
                 }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-orange-600 hover:bg-orange-50 transition"
+                className="w-full flex items-center gap-2 px-3 py-2 text-mauve-magic hover:bg-mauve/10 transition"
               >
-                <Unlink className="w-4 h-4" />
-                <span className="text-sm">Unlink from Account</span>
+                <Send className="w-4 h-4" />
+                <span className="text-sm">Send ADA</span>
               </button>
-            )}
-            
-            <button
-              onClick={() => {
-                disconnectWallet();
-                setShowDropdown(false);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 transition rounded-b-lg"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm">Disconnect Wallet</span>
-            </button>
-          </div>
-        )}
+              
+              {/* Transaction History Button */}
+              <button
+                onClick={() => {
+                  setShowDropdown(false);
+                  setShowHistoryModal(true);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-mauve/80 hover:bg-mauve/10 transition"
+              >
+                <History className="w-4 h-4" />
+                <span className="text-sm">Transaction History</span>
+              </button>
+
+              {/* Unlink Wallet Button - only show if wallet is linked to account */}
+              {user?.walletAddress && (
+                <button
+                  onClick={() => {
+                    setShowDropdown(false);
+                    setShowUnlinkConfirm(true);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-orange-400 hover:bg-orange-500/20 transition"
+                >
+                  <Unlink className="w-4 h-4" />
+                  <span className="text-sm">Unlink from Account</span>
+                </button>
+              )}
+              
+              <button
+                onClick={() => {
+                  disconnectWallet();
+                  setShowDropdown(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-500/20 transition rounded-b-xl"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="text-sm">Disconnect Wallet</span>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Send ADA Modal */}
         <SendAdaModal
@@ -179,272 +201,265 @@ export default function WalletConnect() {
         />
 
         {/* Unlink Wallet Confirmation Modal */}
-        {showUnlinkConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="glass rounded-xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden animate-scale-in">
-              <div className="p-6">
-                <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-orange-100 rounded-full">
-                  <AlertCircle className="w-6 h-6 text-orange-600" />
+        <AnimatePresence>
+          {showUnlinkConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+              onClick={() => setShowUnlinkConfirm(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="glass-dark rounded-xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden border border-mauve/20"
+              >
+                <div className="p-6">
+                  <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-orange-500/20 rounded-full">
+                    <AlertCircle className="w-6 h-6 text-orange-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-mauve text-center mb-2">
+                    Unlink Wallet?
+                  </h3>
+                  <p className="text-sm text-mauve/70 text-center mb-6">
+                    This will remove the connection between your Lace wallet and your account. 
+                    You can link it again later.
+                  </p>
+                  <div className="flex gap-3">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setShowUnlinkConfirm(false)}
+                      className="flex-1 py-2 bg-nightfall-dark text-mauve rounded-xl hover:bg-mauve/10 transition font-medium border border-mauve/20"
+                    >
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={async () => {
+                        setIsUnlinking(true);
+                        await unlinkWallet();
+                        setIsUnlinking(false);
+                        disconnectWallet();
+                        setShowUnlinkConfirm(false);
+                      }}
+                      disabled={isUnlinking}
+                      className="flex-1 py-2 bg-orange-500/20 text-orange-400 rounded-xl hover:bg-orange-500/30 transition font-medium disabled:opacity-50 border border-orange-500/30"
+                    >
+                      {isUnlinking ? 'Unlinking...' : 'Unlink'}
+                    </motion.button>
+                  </div>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 text-center mb-2">
-                  Unlink Wallet?
-                </h3>
-                <p className="text-sm text-gray-600 text-center mb-6">
-                  This will remove the connection between your wallet and your account. 
-                  You can link it again later.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowUnlinkConfirm(false)}
-                    className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      setIsUnlinking(true);
-                      await unlinkWallet();
-                      setIsUnlinking(false);
-                      disconnectWallet();
-                      setShowUnlinkConfirm(false);
-                    }}
-                    disabled={isUnlinking}
-                    className="flex-1 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-medium disabled:opacity-50"
-                  >
-                    {isUnlinking ? 'Unlinking...' : 'Unlink'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
 
-  // Not connected state
+  // Not connected state - Show Lace wallet connection button
   return (
     <div className="relative">
-      <button
-        onClick={() => setShowDropdown(!showDropdown)}
-        className="flex items-center gap-2 px-4 py-2 bg-coffee-bean text-almond-cream rounded-lg hover:bg-toffee-brown transition-all duration-300 shadow-lg hover:shadow-xl magnetic ripple-effect"
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={async () => {
+          if (!isLaceAvailable) {
+            setShowNoWalletModal(true);
+            return;
+          }
+          
+          setLinkError(null);
+          clearError();
+          
+          try {
+            await connectWallet();
+            
+            // Wait a bit for state to update
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            const walletState = useWalletStore.getState();
+            if (walletState.isConnected && walletState.walletAddressBech32) {
+              // Check if user already has a linked wallet
+              if (user?.walletAddress) {
+                // Verify it matches
+                if (user.walletAddress !== walletState.walletAddressBech32) {
+                  setLinkError('This wallet does not match your linked wallet. Please use your linked wallet.');
+                  disconnectWallet();
+                  return;
+                }
+              } else {
+                // No wallet linked yet, link this one
+                setIsLinking(true);
+                const result = await linkWallet(walletState.walletAddressBech32);
+                setIsLinking(false);
+                
+                if (!result.success) {
+                  setLinkError(result.error || 'Failed to link wallet');
+                  disconnectWallet();
+                  return;
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Connection error:', err);
+          }
+        }}
+        disabled={isConnecting || isLinking}
+        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-royal-violet via-lavender-purple to-mauve-magic hover:from-lavender-purple hover:via-mauve-magic hover:to-mauve text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Wallet className="w-4 h-4" />
-        <span className="text-sm font-medium">Connect Wallet</span>
-      </button>
+        <span className="text-sm font-medium">
+          {isConnecting ? 'Connecting...' : isLinking ? 'Linking...' : 'Connect Lace Wallet'}
+        </span>
+      </motion.button>
 
-      {showDropdown && (
-        <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-          <div className="p-3 border-b border-gray-100">
-            <p className="text-sm font-medium text-gray-900">Select Wallet</p>
-            <p className="text-xs text-gray-500">Connect your Cardano wallet</p>
-          </div>
-
-          {error && (
-            <div className="p-3 bg-red-50 border-b border-red-100">
-              <p className="text-xs text-red-600">{error}</p>
-              <button
-                onClick={clearError}
-                className="text-xs text-red-700 underline mt-1"
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
-
-          {availableWallets.length === 0 ? (
-            <div className="p-4 text-center">
-              <p className="text-sm text-gray-500 mb-2">No wallets detected</p>
-              <button
-                onClick={() => {
-                  setShowDropdown(false);
-                  setShowNoWalletModal(true);
-                }}
-                className="text-xs text-blue-600 hover:underline"
-              >
-                Learn how to install →
-              </button>
-            </div>
-          ) : (
-            <div className="p-2">
-              {availableWallets.map((wallet) => (
+      {/* Error Display */}
+      <AnimatePresence>
+        {(error || linkError) && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute right-0 mt-2 w-80 glass-dark border border-red-500/30 rounded-xl shadow-xl z-50 p-3"
+          >
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs text-red-300">{error || linkError}</p>
                 <button
-                  key={wallet}
                   onClick={() => {
-                    selectWallet(wallet);
+                    clearError();
+                    setLinkError(null);
                   }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                    selectedWallet === wallet
-                      ? 'bg-purple-50 border border-purple-200'
-                      : 'hover:bg-gray-50'
-                  }`}
+                  className="text-xs text-red-400 underline mt-1"
                 >
-                  <Wallet className="w-5 h-5 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-700 capitalize">
-                    {wallet}
-                  </span>
-                  {selectedWallet === wallet && (
-                    <span className="ml-auto text-xs text-purple-600">Selected</span>
-                  )}
+                  Dismiss
                 </button>
-              ))}
-            </div>
-          )}
-
-          {/* Show user's linked wallet if they have one */}
-          {user?.walletAddress && (
-            <div className="p-3 bg-blue-50 border-b border-blue-100">
-              <div className="flex items-center gap-2 text-blue-700">
-                <Link className="w-4 h-4" />
-                <span className="text-xs font-medium">Linked Wallet</span>
               </div>
-              <p className="text-xs font-mono text-blue-600 mt-1 truncate">
-                {user.walletAddress.slice(0, 20)}...{user.walletAddress.slice(-10)}
-              </p>
             </div>
-          )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* Link error */}
-          {linkError && (
-            <div className="p-3 bg-orange-50 border-b border-orange-100">
-              <div className="flex items-center gap-2 text-orange-700">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="text-xs">{linkError}</span>
-              </div>
-              <button
-                onClick={() => setLinkError(null)}
-                className="text-xs text-orange-700 underline mt-1"
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
-
-          {selectedWallet && (
-            <div className="p-3 border-t border-gray-100">
-              <button
-                onClick={async () => {
-                  setLinkError(null);
-                  await connectWallet();
-                  
-                  const walletState = useWalletStore.getState();
-                  if (walletState.isConnected && walletState.walletAddressBech32) {
-                    // Check if user already has a linked wallet
-                    if (user?.walletAddress) {
-                      // Verify it matches
-                      if (user.walletAddress !== walletState.walletAddressBech32) {
-                        setLinkError('This wallet does not match your linked wallet. Please use your linked wallet.');
-                        disconnectWallet();
-                        return;
-                      }
-                    } else {
-                      // No wallet linked yet, link this one
-                      setIsLinking(true);
-                      const result = await linkWallet(walletState.walletAddressBech32);
-                      setIsLinking(false);
-                      
-                      if (!result.success) {
-                        setLinkError(result.error || 'Failed to link wallet');
-                        disconnectWallet();
-                        return;
-                      }
-                    }
-                    setShowDropdown(false);
-                  }
-                }}
-                disabled={isConnecting || isLinking}
-                className="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
-              >
-                {isConnecting ? 'Connecting...' : isLinking ? 'Linking...' : `Connect ${selectedWallet}`}
-              </button>
-            </div>
-          )}
+      {/* Show user's linked wallet if they have one */}
+      {isConnected && user?.walletAddress && (
+        <div className="absolute right-0 mt-2 w-80 glass-light border border-mauve/20 rounded-xl p-3 text-xs">
+          <div className="flex items-center gap-2 text-mauve-magic mb-1">
+            <Link className="w-4 h-4" />
+            <span className="font-medium">Linked Wallet</span>
+          </div>
+          <p className="text-xs font-mono text-mauve/70 truncate">
+            {user.walletAddress.slice(0, 20)}...{user.walletAddress.slice(-10)}
+          </p>
         </div>
-      )}
-
-      {/* Click outside to close */}
-      {showDropdown && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowDropdown(false)}
-        />
       )}
 
       {/* No Wallet Detected Modal */}
-      {showNoWalletModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="glass rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-scale-in">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-purple-600 to-blue-600">
-              <h2 className="text-lg font-bold text-white">Wallet Required</h2>
-              <button
-                onClick={() => setShowNoWalletModal(false)}
-                className="p-1 hover:bg-white/20 rounded-lg transition"
-              >
-                <X className="w-5 h-5 text-white" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="p-6">
-              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-orange-100 rounded-full">
-                <AlertTriangle className="w-8 h-8 text-orange-600" />
-              </div>
-              
-              <h3 className="text-lg font-bold text-gray-900 text-center mb-2">
-                No Cardano Wallet Detected
-              </h3>
-              
-              <p className="text-sm text-gray-600 text-center mb-6">
-                To use blockchain features like sending ADA and saving notes on-chain, 
-                you need to install a Cardano wallet browser extension.
-              </p>
-
-              <div className="bg-purple-50 rounded-lg p-4 mb-6">
-                <h4 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
-                  <Download className="w-4 h-4" />
-                  Recommended: Lace Wallet
-                </h4>
-                <p className="text-sm text-purple-700 mb-3">
-                  Lace is a user-friendly Cardano wallet developed by IOG (Input Output Global).
-                </p>
-                <ul className="text-xs text-purple-600 space-y-1 mb-3">
-                  <li>• Easy to use interface</li>
-                  <li>• Secure key management</li>
-                  <li>• Supports Preview testnet</li>
-                  <li>• Free to install</li>
-                </ul>
-              </div>
-
-              <div className="space-y-3">
-                <a
-                  href="https://www.lace.io/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
+      <AnimatePresence>
+        {showNoWalletModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+            onClick={() => setShowNoWalletModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass-dark rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-mauve/20"
+            >
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-mauve/20 flex items-center justify-between bg-gradient-to-r from-royal-violet/30 to-lavender-purple/30">
+                <h2 className="text-lg font-bold text-mauve">Lace Wallet Required</h2>
+                <motion.button
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowNoWalletModal(false)}
+                  className="p-1 hover:bg-mauve/10 rounded-lg transition"
                 >
-                  <Download className="w-4 h-4" />
-                  Install Lace Wallet
-                </a>
+                  <X className="w-5 h-5 text-mauve" />
+                </motion.button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-orange-500/20 rounded-full">
+                  <AlertTriangle className="w-8 h-8 text-orange-400" />
+                </div>
                 
-                <button
-                  onClick={() => {
-                    setShowNoWalletModal(false);
-                    detectWallets();
-                  }}
-                  className="w-full py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium text-sm"
-                >
-                  I've installed it - Refresh
-                </button>
-              </div>
+                <h3 className="text-lg font-bold text-mauve text-center mb-2">
+                  Lace Wallet Not Detected
+                </h3>
+                
+                <p className="text-sm text-mauve/70 text-center mb-6">
+                  To use blockchain features like sending ADA and saving notes on-chain, 
+                  you need to install the Lace wallet browser extension.
+                </p>
 
-              <p className="text-xs text-gray-500 text-center mt-4">
-                After installing, refresh this page or click the button above to detect your wallet.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+                <div className="glass-light rounded-xl p-4 mb-6 border border-mauve/20">
+                  <h4 className="font-semibold text-mauve mb-2 flex items-center gap-2">
+                    <Download className="w-4 h-4 text-mauve-magic" />
+                    Install Lace Wallet
+                  </h4>
+                  <p className="text-sm text-mauve/80 mb-3">
+                    Lace is a user-friendly Cardano wallet developed by IOG (Input Output Global).
+                  </p>
+                  <ul className="text-xs text-mauve/70 space-y-1 mb-3">
+                    <li>• Easy to use interface</li>
+                    <li>• Secure key management</li>
+                    <li>• Supports Preview testnet</li>
+                    <li>• Free to install</li>
+                  </ul>
+                </div>
+
+                <div className="space-y-3">
+                  <motion.a
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    href="https://www.lace.io/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-royal-violet to-lavender-purple hover:from-lavender-purple hover:to-mauve-magic text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+                  >
+                    <Download className="w-4 h-4" />
+                    Install Lace Wallet
+                  </motion.a>
+                  
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      setShowNoWalletModal(false);
+                      const available = detectLaceWallet();
+                      setIsLaceAvailable(available);
+                      if (available) {
+                        // Auto-connect after detection
+                        setTimeout(() => connectWallet(), 500);
+                      }
+                    }}
+                    className="w-full py-2 bg-nightfall-dark text-mauve rounded-xl hover:bg-mauve/10 transition font-medium text-sm border border-mauve/20"
+                  >
+                    I've installed it - Refresh
+                  </motion.button>
+                </div>
+
+                <p className="text-xs text-mauve/60 text-center mt-4">
+                  After installing, refresh this page or click the button above to detect your Lace wallet.
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

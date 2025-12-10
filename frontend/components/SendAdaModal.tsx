@@ -125,16 +125,16 @@ export default function SendAdaModal({ isOpen, onClose }: SendAdaModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-      <div className="glass rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-scale-in">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+      <div className="glass-dark rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-purple-500/30 animate-in zoom-in-95 duration-200 my-auto">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Send ADA</h2>
+        <div className="px-6 py-4 border-b border-purple-500/20 flex items-center justify-between bg-gradient-to-r from-purple-600/10 to-pink-600/10">
+          <h2 className="text-xl font-bold text-purple-100">Send ADA</h2>
           <button
             onClick={handleClose}
-            className="p-1 hover:bg-gray-100 rounded-lg transition"
+            className="p-1.5 hover:bg-purple-500/20 rounded-lg transition-colors"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-purple-300" />
           </button>
         </div>
 
@@ -142,17 +142,19 @@ export default function SendAdaModal({ isOpen, onClose }: SendAdaModalProps) {
         {txHash ? (
           <div className="p-6">
             <div className="text-center">
-              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-10 h-10 text-green-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-purple-100 mb-2">
                 Transaction Submitted!
               </h3>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-purple-300/70 mb-4">
                 Your transaction has been submitted to the blockchain.
               </p>
               
-              <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                <p className="text-xs text-gray-500 mb-1">Transaction Hash</p>
-                <p className="text-xs font-mono text-gray-700 break-all">
+              <div className="bg-slate-900/50 border border-purple-500/20 rounded-xl p-4 mb-4">
+                <p className="text-xs text-purple-300/60 mb-2">Transaction Hash</p>
+                <p className="text-xs font-mono text-purple-200 break-all">
                   {txHash}
                 </p>
               </div>
@@ -161,7 +163,7 @@ export default function SendAdaModal({ isOpen, onClose }: SendAdaModalProps) {
                 href={`https://preview.cardanoscan.io/transaction/${txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-blue-600 hover:underline text-sm"
+                className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors text-sm font-medium"
               >
                 View on CardanoScan
                 <ExternalLink className="w-4 h-4" />
@@ -170,7 +172,7 @@ export default function SendAdaModal({ isOpen, onClose }: SendAdaModalProps) {
 
             <button
               onClick={handleClose}
-              className="w-full mt-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+              className="w-full mt-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl transition-all font-semibold shadow-lg"
             >
               Close
             </button>
@@ -178,18 +180,18 @@ export default function SendAdaModal({ isOpen, onClose }: SendAdaModalProps) {
         ) : (
           <>
             {/* Form */}
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-5">
               {/* Balance Display */}
-              <div className="bg-purple-50 rounded-lg p-3">
-                <p className="text-xs text-purple-600 mb-1">Available Balance</p>
-                <p className="text-lg font-bold text-purple-700">
-                  {balanceAda || '0.00'} ₳
+              <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 rounded-xl p-4">
+                <p className="text-xs text-purple-300/70 mb-1">Available Balance</p>
+                <p className="text-2xl font-bold text-purple-100">
+                  {balanceAda || '0.00'} <span className="text-lg">₳</span>
                 </p>
               </div>
 
               {/* Recipient Address */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-purple-200 mb-2">
                   Recipient Address
                 </label>
                 <input
@@ -197,13 +199,13 @@ export default function SendAdaModal({ isOpen, onClose }: SendAdaModalProps) {
                   value={recipientAddress}
                   onChange={(e) => setRecipientAddress(e.target.value)}
                   placeholder="addr_test1..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 text-sm font-mono"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-purple-500/20 rounded-xl text-purple-100 placeholder:text-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all text-sm font-mono"
                 />
               </div>
 
               {/* Amount */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-purple-200 mb-2">
                   Amount (ADA)
                 </label>
                 <div className="relative">
@@ -214,42 +216,42 @@ export default function SendAdaModal({ isOpen, onClose }: SendAdaModalProps) {
                     placeholder="0.00"
                     min="1"
                     step="0.1"
-                    className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+                    className="w-full px-4 py-3 pr-12 bg-slate-900/50 border border-purple-500/20 rounded-xl text-purple-100 placeholder:text-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-purple-300 text-lg font-semibold">
                     ₳
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Minimum: 1 ADA</p>
+                <p className="text-xs text-purple-300/60 mt-2">Minimum: 1 ADA</p>
               </div>
 
               {/* Error */}
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-600">{error}</p>
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+                  <p className="text-sm text-red-400">{error}</p>
                 </div>
               )}
 
               {/* Network Warning */}
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-xs text-yellow-700">
+              <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+                <p className="text-xs text-yellow-300">
                   <strong>Preview Network:</strong> This is testnet ADA, not real funds.
                 </p>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-200 flex gap-3">
+            <div className="px-6 py-4 border-t border-purple-500/20 flex gap-3 bg-slate-950/50">
               <button
                 onClick={handleClose}
-                className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                className="flex-1 py-3 bg-slate-800/50 text-purple-200 rounded-xl hover:bg-slate-800 transition-colors font-medium border border-purple-500/20"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSend}
                 disabled={isSending || !recipientAddress || !amount}
-                className="flex-1 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-semibold shadow-lg shadow-purple-500/25"
               >
                 {isSending ? (
                   <>

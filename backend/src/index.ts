@@ -29,6 +29,16 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend is running!' });
 });
 
+// Debug endpoint to check environment
+app.get('/api/debug', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    jwtSecret: process.env.JWT_SECRET ? 'SET' : 'NOT SET',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+    port: process.env.PORT || 4000,
+  });
+});
+
 //Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', noteRoutes);
