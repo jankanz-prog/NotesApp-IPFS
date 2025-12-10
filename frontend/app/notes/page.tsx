@@ -14,6 +14,18 @@ import BlockchainRecovery from '@/components/BlockchainRecovery';
 const COLORS = ['#7f5539', '#9c6644', '#b08968', '#ddb892', '#e6ccb2', '#ede0d4'];
 const IMPORTANCE_LEVELS = [1, 2, 3, 4, 5];
 
+// Helper function to get full image URL
+const getImageUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  // If it's already a full URL (http/https), return as is
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  // If it's a relative path, prepend the backend URL
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:4000';
+  return `${backendUrl}${url}`;
+};
+
 export default function NotesPage() {
   const router = useRouter();
   const { user, logout, initializeAuth, isInitialized } = useAuthStore();
@@ -341,7 +353,7 @@ export default function NotesPage() {
             >
               {user.profilePicture ? (
                 <img
-                  src={user.profilePicture}
+                  src={getImageUrl(user.profilePicture) || user.profilePicture}
                   alt={user.username}
                   className="w-8 h-8 rounded-full object-cover ring-2 ring-coffee-bean/20 group-hover:ring-coffee-bean transition-all"
                 />

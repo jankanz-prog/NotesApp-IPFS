@@ -1,11 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
-import { BookOpen, ArrowLeft, Mail, User, Wallet, Camera, Save, Loader2, CheckCircle } from 'lucide-react';
+import { BookOpen, ArrowLeft, Mail, User, Wallet, Camera, Save, Loader2, CheckCircle, Upload, Link as LinkIcon } from 'lucide-react';
 import api from '@/lib/api';
+
+// Helper function to get full image URL
+const getImageUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  // If it's already a full URL (http/https), return as is
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  // If it's a relative path, prepend the backend URL
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:4000';
+  return `${backendUrl}${url}`;
+};
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -18,6 +30,10 @@ export default function ProfilePage() {
   // Edit form state
   const [username, setUsername] = useState('');
   const [profilePicture, setProfilePicture] = useState('');
+  const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('file');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     initializeAuth();
@@ -44,20 +60,58 @@ export default function ProfilePage() {
     );
   }
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select an image file');
+        return;
+      }
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('File size must be less than 5MB');
+        return;
+      }
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setError('');
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     setError('');
     setSuccess('');
     
     try {
+      let updatedProfilePicture = profilePicture;
+
+      // If user selected a file, upload it first
+      if (uploadMethod === 'file' && selectedFile) {
+        const formData = new FormData();
+        formData.append('profilePicture', selectedFile);
+        
+        const uploadResponse = await api.post('/auth/profile-picture/upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        
+        updatedProfilePicture = uploadResponse.data.user.profilePicture;
+      }
+
+      // Update profile with username and profile picture
       const response = await api.put('/auth/profile', {
         username,
-        profilePicture: profilePicture || null,
+        profilePicture: uploadMethod === 'url' ? (profilePicture || null) : updatedProfilePicture,
       });
       
       setUser(response.data.user);
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
+      setSelectedFile(null);
+      setPreviewUrl('');
       
       // Show success animation
       setTimeout(() => setSuccess(''), 3000);
@@ -73,6 +127,9 @@ export default function ProfilePage() {
     setProfilePicture(user.profilePicture || '');
     setIsEditing(false);
     setError('');
+    setSelectedFile(null);
+    setPreviewUrl('');
+    setUploadMethod('file');
   };
 
   return (
@@ -107,7 +164,7 @@ export default function ProfilePage() {
               <div className="relative inline-block group">
                 {user.profilePicture ? (
                   <img
-                    src={user.profilePicture}
+                    src={getImageUrl(user.profilePicture) || user.profilePicture}
                     alt={user.username}
                     className="w-24 h-24 rounded-full object-cover border-4 border-almond-cream shadow-2xl group-hover:scale-110 transition-transform duration-300"
                   />
@@ -180,21 +237,97 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* Profile Picture URL */}
-              {isEditing && (
+              {/* Profile Picture Upload/URL */}
+              {isEditing && !user.profilePicture?.includes('googleusercontent.com') && (
                 <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
                   <label className="flex items-center gap-2 text-sm font-medium text-coffee-bean mb-2">
                     <Camera className="w-4 h-4" />
-                    Profile Picture URL
+                    Profile Picture
                   </label>
-                  <input
-                    type="url"
-                    value={profilePicture}
-                    onChange={(e) => setProfilePicture(e.target.value)}
-                    placeholder="https://example.com/your-photo.jpg"
-                    className="w-full px-4 py-3 border-2 border-faded-copper/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-coffee-bean focus:border-coffee-bean text-coffee-bean transition-all duration-300"
-                  />
-                  <p className="mt-1 text-xs text-coffee-bean/50">Enter a URL to an image (Google profile pictures are set automatically)</p>
+                  
+                  {/* Upload Method Toggle */}
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setUploadMethod('file')}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                        uploadMethod === 'file'
+                          ? 'bg-coffee-bean text-almond-cream'
+                          : 'bg-desert-sand/30 text-coffee-bean hover:bg-desert-sand/50'
+                      }`}
+                    >
+                      <Upload className="w-4 h-4" />
+                      Upload File
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUploadMethod('url')}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                        uploadMethod === 'url'
+                          ? 'bg-coffee-bean text-almond-cream'
+                          : 'bg-desert-sand/30 text-coffee-bean hover:bg-desert-sand/50'
+                      }`}
+                    >
+                      <LinkIcon className="w-4 h-4" />
+                      Use URL
+                    </button>
+                  </div>
+
+                  {uploadMethod === 'file' ? (
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full px-4 py-3 border-2 border-dashed border-faded-copper/30 rounded-lg hover:border-coffee-bean hover:bg-desert-sand/20 transition-all duration-300 text-coffee-bean flex items-center justify-center gap-2"
+                      >
+                        <Upload className="w-5 h-5" />
+                        {selectedFile ? selectedFile.name : 'Choose an image file'}
+                      </button>
+                      {previewUrl && (
+                        <div className="mt-3 flex justify-center">
+                          <img
+                            src={previewUrl}
+                            alt="Preview"
+                            className="w-32 h-32 rounded-full object-cover border-4 border-coffee-bean shadow-lg"
+                          />
+                        </div>
+                      )}
+                      <p className="mt-1 text-xs text-coffee-bean/50">Max file size: 5MB. Supported formats: JPG, PNG, GIF, WebP</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <input
+                        type="url"
+                        value={profilePicture}
+                        onChange={(e) => setProfilePicture(e.target.value)}
+                        placeholder="https://example.com/your-photo.jpg"
+                        className="w-full px-4 py-3 border-2 border-faded-copper/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-coffee-bean focus:border-coffee-bean text-coffee-bean transition-all duration-300"
+                      />
+                      <p className="mt-1 text-xs text-coffee-bean/50">Enter a URL to an image</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* OAuth Profile Picture Notice */}
+              {isEditing && user.profilePicture?.includes('googleusercontent.com') && (
+                <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                  <label className="flex items-center gap-2 text-sm font-medium text-coffee-bean mb-2">
+                    <Camera className="w-4 h-4" />
+                    Profile Picture
+                  </label>
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      Your profile picture is managed by Google. It will update automatically when you change it in your Google account.
+                    </p>
+                  </div>
                 </div>
               )}
 

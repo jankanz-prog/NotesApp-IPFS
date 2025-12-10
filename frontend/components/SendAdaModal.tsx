@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useWalletStore } from '@/store/walletStore';
 import { X, Send, Loader2, CheckCircle, ExternalLink } from 'lucide-react';
 import api from '@/lib/api';
@@ -18,6 +19,24 @@ export default function SendAdaModal({ isOpen, onClose }: SendAdaModalProps) {
   const [isSending, setIsSending] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   const handleSend = async () => {
     if (!walletApi) {
@@ -122,11 +141,18 @@ export default function SendAdaModal({ isOpen, onClose }: SendAdaModalProps) {
     onClose();
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-      <div className="glass rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-scale-in">
+  const modalContent = (
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in"
+      onClick={handleClose}
+      style={{ margin: 0 }}
+    >
+      <div 
+        className="glass rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900">Send ADA</h2>
@@ -269,4 +295,6 @@ export default function SendAdaModal({ isOpen, onClose }: SendAdaModalProps) {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
