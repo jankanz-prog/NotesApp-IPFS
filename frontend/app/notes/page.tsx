@@ -11,7 +11,7 @@ import { Plus, BookOpen, Star, Trash2, Save, Palette, Folder as FolderIcon, Cloc
 import WalletConnect from '@/components/WalletConnect';
 import BlockchainRecovery from '@/components/BlockchainRecovery';
 
-const COLORS = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
+const COLORS = ['#7f5539', '#9c6644', '#b08968', '#ddb892', '#e6ccb2', '#ede0d4'];
 const IMPORTANCE_LEVELS = [1, 2, 3, 4, 5];
 
 export default function NotesPage() {
@@ -39,6 +39,8 @@ export default function NotesPage() {
   const [newNoteFolderId, setNewNoteFolderId] = useState<string | null>(null);
   const [titleWarning, setTitleWarning] = useState<{ message: string; folderName: string } | null>(null);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [customColor, setCustomColor] = useState('#9c6644');
 
   useEffect(() => {
     initializeAuth();
@@ -322,37 +324,37 @@ export default function NotesPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-300">
+    <div className="min-h-screen flex flex-col bg-almond-cream">
+      {/* Sticky Header */}
+      <header className="sticky top-0 z-50 bg-gradient-to-r from-desert-sand via-tan to-almond-cream/90 border-b border-faded-copper/40 backdrop-blur-md shadow-sm animate-fade-in-down">
         <div className="px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <BookOpen className="w-6 h-6 text-blue-600" />
-            <span className="text-xl font-bold text-gray-900">Notes App</span>
+          <div className="flex items-center gap-2 group">
+            <BookOpen className="w-6 h-6 text-coffee-bean group-hover:scale-110 transition-transform duration-300" />
+            <span className="text-xl font-bold gradient-text">Notes App</span>
           </div>
           <div className="flex items-center gap-4">
             <BlockchainRecovery onRecoveryComplete={fetchNotes} />
             <WalletConnect />
             <button
               onClick={() => router.push('/profile')}
-              className="flex items-center gap-2 hover:opacity-80 transition"
+              className="flex items-center gap-2 hover:opacity-80 transition-all duration-300 magnetic group"
             >
               {user.profilePicture ? (
                 <img
                   src={user.profilePicture}
                   alt={user.username}
-                  className="w-8 h-8 rounded-full object-cover"
+                  className="w-8 h-8 rounded-full object-cover ring-2 ring-coffee-bean/20 group-hover:ring-coffee-bean transition-all"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium text-sm">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-coffee-bean to-toffee-brown flex items-center justify-center text-almond-cream font-medium text-sm group-hover:scale-110 transition-transform">
                   {user.username.charAt(0).toUpperCase()}
                 </div>
               )}
-              <span className="text-sm text-gray-900">Hi, {user.username}</span>
+              <span className="text-sm text-coffee-bean font-medium">Hi, {user.username}</span>
             </button>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 text-gray-900 hover:text-red-600 transition"
+              className="px-4 py-2 text-coffee-bean hover:text-red-600 transition-all duration-300 hover:scale-105"
             >
               Logout
             </button>
@@ -363,7 +365,7 @@ export default function NotesPage() {
       {/* Main Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <aside className="w-64 bg-white border-r border-gray-300 overflow-y-auto">
+        <aside className="w-64 bg-desert-sand/70 border-r border-faded-copper/30 backdrop-blur-sm overflow-y-auto">
           <div className="p-6">
             {/* Favorite Notes */}
             <div className="mb-6">
@@ -376,8 +378,8 @@ export default function NotesPage() {
                     <li key={note.id}>
                       <button
                         onClick={() => handleSelectNote(note)}
-                        className={`block w-full text-left text-sm truncate px-2 py-1 rounded hover:bg-blue-50 ${
-                          selectedNote?.id === note.id ? 'bg-blue-100 text-blue-700 font-medium' : 'text-blue-600'
+                        className={`block w-full text-left text-sm truncate px-2 py-1 rounded transition-all duration-300 hover:bg-tan/50 magnetic ${
+                          selectedNote?.id === note.id ? 'bg-tan text-coffee-bean font-medium shadow-sm' : 'text-coffee-bean/70'
                         }`}
                       >
                         {note.title || 'Untitled'}
@@ -399,8 +401,8 @@ export default function NotesPage() {
                     <li key={note.id}>
                       <button
                         onClick={() => handleSelectNote(note)}
-                        className={`block w-full text-left text-sm truncate px-2 py-1 rounded hover:bg-orange-50 ${
-                          selectedNote?.id === note.id ? 'bg-orange-100 text-orange-700 font-medium' : 'text-orange-600'
+                        className={`block w-full text-left text-sm truncate px-2 py-1 rounded transition-all duration-300 hover:bg-faded-copper/30 magnetic ${
+                          selectedNote?.id === note.id ? 'bg-faded-copper/40 text-coffee-bean font-medium shadow-sm' : 'text-coffee-bean/70'
                         }`}
                       >
                         {note.title || 'Untitled'}
@@ -417,8 +419,8 @@ export default function NotesPage() {
               {/* Default Folder */}
               <button
                 onClick={() => setSelectedFolder(null)}
-                className={`flex items-center gap-2 w-full text-left text-sm px-2 py-1.5 rounded hover:bg-gray-100 mb-1 ${
-                  !selectedFolder ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-700'
+                className={`flex items-center gap-2 w-full text-left text-sm px-2 py-1.5 rounded transition-all duration-300 hover:bg-tan/50 mb-1 magnetic ${
+                  !selectedFolder ? 'bg-tan/70 text-coffee-bean font-medium shadow-sm' : 'text-coffee-bean/70'
                 }`}
               >
                 <FolderIcon className="w-4 h-4" />
@@ -434,8 +436,8 @@ export default function NotesPage() {
                     <li key={folder.id}>
                       <button
                         onClick={() => setSelectedFolder(folder)}
-                        className={`flex items-center gap-2 w-full text-left text-sm px-2 py-1.5 rounded hover:bg-gray-100 ${
-                          selectedFolder?.id === folder.id ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-700'
+                        className={`flex items-center gap-2 w-full text-left text-sm px-2 py-1.5 rounded transition-all duration-300 hover:bg-tan/50 magnetic ${
+                          selectedFolder?.id === folder.id ? 'bg-tan/70 text-coffee-bean font-medium shadow-sm' : 'text-coffee-bean/70'
                         }`}
                       >
                         <FolderIcon className="w-4 h-4 text-blue-500" />
@@ -459,8 +461,8 @@ export default function NotesPage() {
                     <li key={note.id}>
                       <button
                         onClick={() => handleSelectNote(note)}
-                        className={`block w-full text-left text-sm truncate px-2 py-1 rounded hover:bg-gray-100 ${
-                          selectedNote?.id === note.id ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-900'
+                        className={`block w-full text-left text-sm truncate px-2 py-1 rounded transition-all duration-300 hover:bg-desert-sand/50 magnetic ${
+                          selectedNote?.id === note.id ? 'bg-desert-sand/70 text-coffee-bean font-medium shadow-sm' : 'text-coffee-bean'
                         }`}
                       >
                         {note.title || 'Untitled'}
@@ -474,16 +476,16 @@ export default function NotesPage() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-white">
+        <main className="flex-1 flex flex-col overflow-hidden bg-almond-cream">
           {!selectedNote ? (
-            <div className="flex-1 overflow-y-auto p-8 bg-gray-50">
+            <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-almond-cream via-desert-sand/40 to-tan/30">
               <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-gray-900">
                   {selectedFolder ? selectedFolder.name : 'My Notes'}
                 </h1>
                 <button
                   onClick={handleOpenNewNoteModal}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-coffee-bean text-almond-cream rounded-lg hover:bg-toffee-brown transition-all duration-300 shadow-lg hover:shadow-xl magnetic ripple-effect"
                 >
                   <Plus className="w-4 h-4" />
                   New Note
@@ -498,7 +500,7 @@ export default function NotesPage() {
                       <button
                         key={note.id}
                         onClick={() => setSelectedNote(note)}
-                        className="p-6 bg-white border border-gray-300 rounded-lg hover:shadow-md transition text-left"
+                        className="p-6 glass border border-faded-copper/20 rounded-lg hover:shadow-xl transition-all duration-300 text-left magnetic group"
                         style={{ borderLeftWidth: '4px', borderLeftColor: note.color || '#e5e7eb' }}
                       >
                         <div className="flex justify-between items-start mb-2">
@@ -528,10 +530,10 @@ export default function NotesPage() {
               {!selectedFolder && (
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold text-gray-900">Folders</h2>
+                    <h2 className="text-xl font-semibold text-coffee-bean">Folders</h2>
                     <button
                       onClick={() => setShowFolderInput(!showFolderInput)}
-                      className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                      className="flex items-center gap-2 px-4 py-2 text-coffee-bean hover:bg-tan/50 rounded-lg transition-all duration-300 magnetic ripple-effect"
                     >
                       <Plus className="w-4 h-4" />
                       New Folder
@@ -546,12 +548,12 @@ export default function NotesPage() {
                         onChange={(e) => setNewFolderName(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
                         placeholder="Folder name..."
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                        className="flex-1 px-4 py-2 border-2 border-faded-copper/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-coffee-bean focus:border-coffee-bean text-coffee-bean bg-almond-cream transition-all duration-300"
                         autoFocus
                       />
                       <button
                         onClick={handleCreateFolder}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        className="px-4 py-2 bg-coffee-bean text-almond-cream rounded-lg hover:bg-toffee-brown transition-all duration-300 shadow-md hover:shadow-lg magnetic ripple-effect"
                       >
                         Create
                       </button>
@@ -560,7 +562,7 @@ export default function NotesPage() {
                           setShowFolderInput(false);
                           setNewFolderName('');
                         }}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                        className="px-4 py-2 bg-desert-sand text-coffee-bean rounded-lg hover:bg-tan transition-all duration-300 magnetic"
                       >
                         Cancel
                       </button>
@@ -571,11 +573,11 @@ export default function NotesPage() {
                     {folders.map((folder) => (
                       <div
                         key={folder.id}
-                        className="group relative p-6 bg-white border border-gray-300 rounded-lg hover:shadow-md transition cursor-pointer"
+                        className="group relative p-6 glass border border-faded-copper/30 rounded-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
                         onClick={() => setSelectedFolder(folder)}
                       >
                         <div className="flex items-start justify-between mb-2">
-                          <FolderIcon className="w-12 h-12 text-blue-600" />
+                          <FolderIcon className="w-12 h-12 text-coffee-bean" />
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -586,10 +588,10 @@ export default function NotesPage() {
                             <Trash2 className="w-4 h-4 text-red-600" />
                           </button>
                         </div>
-                        <h3 className="font-semibold text-lg text-gray-900 mb-1">
+                        <h3 className="font-semibold text-lg text-coffee-bean mb-1">
                           {folder.name}
                         </h3>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-coffee-bean/70">
                           Has {folder._count?.notes || 0} notes
                         </p>
                       </div>
@@ -625,7 +627,7 @@ export default function NotesPage() {
                         <button
                           key={note.id}
                           onClick={() => setSelectedNote(note)}
-                          className="p-6 bg-white border border-gray-300 rounded-lg hover:shadow-md transition text-left"
+                          className="p-6 glass border border-faded-copper/20 rounded-lg hover:shadow-xl transition-all duration-300 text-left magnetic group"
                           style={{ borderLeftWidth: '4px', borderLeftColor: note.color || '#e5e7eb' }}
                         >
                           <div className="flex justify-between items-start mb-2">
@@ -655,13 +657,13 @@ export default function NotesPage() {
           ) : (
             <>
               {/* Editor Toolbar */}
-              <div className="bg-white border-b border-gray-300 px-6 py-4">
+              <div className="glass border-b border-faded-copper/30 px-6 py-4 backdrop-blur-md bg-gradient-to-r from-desert-sand/70 via-almond-cream/70 to-tan/40">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     {/* Back Button */}
                     <button
                       onClick={() => setSelectedNote(null)}
-                      className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                    className="flex items-center gap-2 px-3 py-2 text-coffee-bean hover:bg-tan/60 rounded-lg transition-all duration-300 magnetic"
                       title="Back to main view"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -671,36 +673,75 @@ export default function NotesPage() {
                     </button>
 
                     {/* Color Picker */}
-                    <div className="flex items-center gap-3">
-                      <Palette className="w-5 h-5 text-gray-700" />
+                    <div className="flex items-center gap-3 relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowColorPicker((v) => !v)}
+                        className="p-2 rounded-full hover:bg-tan/50 transition-all duration-300 magnetic"
+                        aria-label="Choose a custom color"
+                      >
+                        <Palette className="w-5 h-5 text-coffee-bean" />
+                      </button>
                       <div className="flex gap-2">
                         {COLORS.map((c) => (
                           <button
                             key={c}
                             onClick={() => setColor(c)}
-                            className={`w-8 h-8 rounded-full border-2 hover:scale-110 transition ${
-                              color === c ? 'border-gray-900 scale-110' : 'border-gray-300'
+                            className={`w-8 h-8 rounded-full border-2 hover:scale-110 transition shadow-sm ${
+                              color === c ? 'border-coffee-bean scale-110 shadow-coffee-bean/30' : 'border-faded-copper/60'
                             }`}
                             style={{ backgroundColor: c }}
                             title={`Color: ${c}`}
                           />
                         ))}
                       </div>
+
+                      {showColorPicker && (
+                        <div className="absolute top-12 left-0 z-20 bg-almond-cream border border-faded-copper/40 rounded-lg shadow-xl p-3 w-52">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-coffee-bean">Custom color</span>
+                            <button
+                              type="button"
+                              className="text-xs text-coffee-bean/70 hover:text-coffee-bean"
+                              onClick={() => setShowColorPicker(false)}
+                            >
+                              Close
+                            </button>
+                          </div>
+                          <input
+                            type="color"
+                            value={customColor}
+                            onChange={(e) => setCustomColor(e.target.value)}
+                            className="w-full h-10 rounded cursor-pointer bg-transparent border border-faded-copper/50"
+                            aria-label="Custom color"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setColor(customColor);
+                              setShowColorPicker(false);
+                            }}
+                            className="mt-3 w-full py-2 bg-coffee-bean text-almond-cream rounded-lg hover:bg-toffee-brown transition-all duration-300 shadow-md hover:shadow-lg ripple-effect"
+                          >
+                            Apply color
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
                     {/* Importance Selector */}
-                    <span className="text-sm font-medium text-gray-900 mr-2">Importance:</span>
+                    <span className="text-sm font-medium text-coffee-bean mr-2">Importance:</span>
                     {IMPORTANCE_LEVELS.map((level) => (
                       <button
                         key={level}
                         onClick={() => setImportance(level)}
-                        className={`w-10 h-10 rounded font-medium transition ${
+                        className={`w-10 h-10 rounded font-medium transition-all duration-300 magnetic ${
                           importance === level
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            ? 'bg-coffee-bean text-almond-cream shadow-md shadow-coffee-bean/30'
+                            : 'bg-desert-sand text-coffee-bean hover:bg-tan'
                         }`}
                       >
                         {level}
@@ -733,7 +774,7 @@ export default function NotesPage() {
                     <button
                       onClick={handleSave}
                       disabled={isSaving}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                      className="flex items-center gap-2 px-4 py-2 bg-coffee-bean text-almond-cream rounded-lg hover:bg-toffee-brown transition-all duration-300 shadow-lg shadow-coffee-bean/30 hover:shadow-2xl magnetic ripple-effect disabled:opacity-50"
                       title="Save locally"
                     >
                       <Save className="w-4 h-4" />
@@ -744,7 +785,7 @@ export default function NotesPage() {
                     <div className="h-8 w-px bg-gray-300"></div>
 
                     {/* Blockchain Status */}
-                    <div className="flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-desert-sand/60 rounded-lg border border-faded-copper/40 shadow-inner">
                       {renderStatusBadge(selectedNote.status)}
                       {selectedNote.txHash && (
                         <a
@@ -763,10 +804,10 @@ export default function NotesPage() {
                     <button
                       onClick={handleSyncToChain}
                       disabled={isSendingToBlockchain || !isWalletConnected}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition disabled:opacity-50 ${
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl magnetic ripple-effect disabled:opacity-50 ${
                         isWalletConnected 
-                          ? 'bg-purple-600 text-white hover:bg-purple-700' 
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          ? 'bg-faded-copper text-almond-cream hover:bg-coffee-bean' 
+                          : 'bg-desert-sand text-coffee-bean/50 cursor-not-allowed'
                       }`}
                       title={isWalletConnected ? 'Sync note to Cardano blockchain' : 'Connect wallet to sync'}
                     >
@@ -794,7 +835,7 @@ export default function NotesPage() {
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full text-4xl font-bold border-none focus:outline-none bg-transparent mb-6 text-gray-900 placeholder-gray-400"
+                    className="w-full text-4xl font-bold border-none focus:outline-none bg-transparent mb-6 text-coffee-bean placeholder-coffee-bean/40"
                     placeholder="Note title..."
                   />
 
@@ -802,7 +843,7 @@ export default function NotesPage() {
                   <textarea
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
-                    className="w-full min-h-[500px] text-lg border-none focus:outline-none bg-transparent resize-none text-gray-900 placeholder-gray-400 leading-relaxed"
+                    className="w-full min-h-[500px] text-lg border-none focus:outline-none bg-transparent resize-none text-coffee-bean placeholder-coffee-bean/40 leading-relaxed"
                     placeholder="Here is the content of notes..."
                   />
                 </div>
@@ -814,10 +855,10 @@ export default function NotesPage() {
 
       {/* New Note Modal */}
       {showNewNoteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="glass rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-scale-in">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Create New Note</h2>
+              <h2 className="text-xl font-bold gradient-text">Create New Note</h2>
             </div>
             
             <div className="p-6 space-y-4">
@@ -833,7 +874,7 @@ export default function NotesPage() {
                   }}
                   onKeyPress={(e) => e.key === 'Enter' && !titleWarning && handleCreateNote()}
                   placeholder="Enter note title..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  className="w-full px-4 py-2 border-2 border-faded-copper/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-coffee-bean focus:border-coffee-bean text-coffee-bean transition-all duration-300"
                   autoFocus
                 />
               </div>
@@ -847,7 +888,7 @@ export default function NotesPage() {
                     setNewNoteFolderId(e.target.value || null);
                     setTitleWarning(null); // Clear warning when folder changes
                   }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  className="w-full px-4 py-2 border-2 border-faded-copper/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-coffee-bean focus:border-coffee-bean text-coffee-bean bg-almond-cream transition-all duration-300"
                 >
                   <option value="">My Notes (Default)</option>
                   {folders.map((folder) => (
@@ -888,14 +929,14 @@ export default function NotesPage() {
               <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
                 <button
                   onClick={handleCloseNewNoteModal}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                  className="px-4 py-2 text-coffee-bean hover:bg-tan/50 rounded-lg transition-all duration-300 magnetic"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleCreateNote()}
                   disabled={isCreatingNote || !newNoteTitle.trim()}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                  className="px-6 py-2 bg-coffee-bean text-almond-cream rounded-lg hover:bg-toffee-brown transition-all duration-300 shadow-lg hover:shadow-xl magnetic ripple-effect disabled:opacity-50"
                 >
                   {isCreatingNote ? 'Creating...' : 'Create Note'}
                 </button>

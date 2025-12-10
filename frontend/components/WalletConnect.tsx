@@ -63,7 +63,7 @@ export default function WalletConnect() {
       <div className="relative">
         <button
           onClick={() => setShowDropdown(!showDropdown)}
-          className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition"
+          className="flex items-center gap-2 px-3 py-2 bg-tan/50 border border-faded-copper/30 rounded-lg hover:bg-tan transition-all duration-300 magnetic"
         >
           <Wallet className="w-4 h-4 text-green-600" />
           <div className="flex flex-col items-start">
@@ -181,7 +181,7 @@ export default function WalletConnect() {
         {/* Unlink Wallet Confirmation Modal */}
         {showUnlinkConfirm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+            <div className="glass rounded-xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden animate-scale-in">
               <div className="p-6">
                 <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-orange-100 rounded-full">
                   <AlertCircle className="w-6 h-6 text-orange-600" />
@@ -227,7 +227,7 @@ export default function WalletConnect() {
     <div className="relative">
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+        className="flex items-center gap-2 px-4 py-2 bg-coffee-bean text-almond-cream rounded-lg hover:bg-toffee-brown transition-all duration-300 shadow-lg hover:shadow-xl magnetic ripple-effect"
       >
         <Wallet className="w-4 h-4" />
         <span className="text-sm font-medium">Connect Wallet</span>
@@ -373,7 +373,7 @@ export default function WalletConnect() {
       {/* No Wallet Detected Modal */}
       {showNoWalletModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+          <div className="glass rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-scale-in">
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-purple-600 to-blue-600">
               <h2 className="text-lg font-bold text-white">Wallet Required</h2>
