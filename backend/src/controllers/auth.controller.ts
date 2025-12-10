@@ -154,6 +154,48 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
 
 };
 
+export const updateProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).userId;
+    const { username, profilePicture } = req.body;
+
+    // Check if username is taken by another user
+    if (username) {
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          username,
+          NOT: { id: userId },
+        },
+      });
+
+      if (existingUser) {
+        res.status(400).json({ error: 'Username is already taken' });
+        return;
+      }
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(username && { username }),
+        profilePicture: profilePicture ?? undefined,
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        profilePicture: true,
+        walletAddress: true,
+      },
+    });
+
+    res.json({ message: 'Profile updated', user });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+};
+
 export const updateProfilePicture = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;

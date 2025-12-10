@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, ExternalLink, User, Clock, ArrowUpRight, ArrowDownLeft, Loader2 } from 'lucide-react';
+import { X, ExternalLink, User, Clock, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw } from 'lucide-react';
+import { useWalletStore } from '@/store/walletStore';
 import api from '@/lib/api';
 
 interface Counterparty {
@@ -30,9 +31,11 @@ interface TransactionHistoryProps {
 }
 
 export default function TransactionHistory({ isOpen, onClose }: TransactionHistoryProps) {
+  const { walletApi } = useWalletStore();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryingTx, setRetryingTx] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -50,6 +53,70 @@ export default function TransactionHistory({ isOpen, onClose }: TransactionHisto
       setError(err.response?.data?.error || 'Failed to load transactions');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRetry = async (tx: Transaction) => {
+    if (!walletApi) {
+      setError('Please connect your wallet to retry');
+      return;
+    }
+
+    setRetryingTx(tx.id);
+    setError(null);
+
+    try {
+      // Dynamic import to avoid SSR issues
+      const { Blaze, Blockfrost, Core, WebWallet } = await import('@blaze-cardano/sdk');
+
+      const projectId = process.env.NEXT_PUBLIC_BLOCKFROST_PROJECT_ID;
+      if (!projectId) throw new Error('Blockfrost API key not configured');
+
+      const provider = new Blockfrost({
+        network: 'cardano-preview',
+        projectId,
+      });
+
+      const wallet = new WebWallet(walletApi as any);
+      const blaze = await Blaze.from(provider, wallet);
+
+      // Convert ADA to Lovelace
+      const lovelaceAmount = BigInt(Math.floor(tx.amount * 1_000_000));
+
+      // Build transaction
+      const newTx = await blaze
+        .newTransaction()
+        .payLovelace(
+          Core.Address.fromBech32(tx.recipientWallet),
+          lovelaceAmount
+        )
+        .complete();
+
+      // Sign and submit
+      const signedTx = await blaze.signTransaction(newTx);
+      const newTxHash = await blaze.provider.postTransactionToChain(signedTx);
+
+      // Get sender address
+      const senderAddressHex = await walletApi.getChangeAddress();
+      const senderAddress = Core.Address.fromBytes(
+        Core.HexBlob(senderAddressHex)
+      ).toBech32();
+
+      // Save new transaction
+      await api.post('/transactions', {
+        senderWallet: senderAddress,
+        recipientWallet: tx.recipientWallet,
+        amount: tx.amount,
+        txHash: newTxHash,
+      });
+
+      // Refresh list
+      await fetchTransactions();
+    } catch (err: any) {
+      console.error('Retry failed:', err);
+      setError(err.message || 'Retry failed');
+    } finally {
+      setRetryingTx(null);
     }
   };
 
@@ -84,8 +151,8 @@ export default function TransactionHistory({ isOpen, onClose }: TransactionHisto
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+      <div className="glass rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden flex flex-col animate-scale-in">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
           <h2 className="text-xl font-bold text-gray-900">Transaction History</h2>
@@ -177,13 +244,30 @@ export default function TransactionHistory({ isOpen, onClose }: TransactionHisto
                       }`}>
                         {tx.type === 'sent' ? '-' : '+'}{tx.amount.toFixed(2)} ₳
                       </p>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(
-                          tx.status
-                        )}`}
-                      >
-                        {tx.status}
-                      </span>
+                      <div className="flex items-center gap-2 justify-end mt-1">
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(
+                            tx.status
+                          )}`}
+                        >
+                          {tx.status}
+                        </span>
+                        {/* Retry button for failed sent transactions */}
+                        {tx.status === 'FAILED' && tx.type === 'sent' && (
+                          <button
+                            onClick={() => handleRetry(tx)}
+                            disabled={retryingTx === tx.id}
+                            className="flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full hover:bg-orange-200 transition disabled:opacity-50"
+                          >
+                            {retryingTx === tx.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-3 h-3" />
+                            )}
+                            Retry
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 

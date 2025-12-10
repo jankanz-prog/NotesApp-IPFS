@@ -7,8 +7,8 @@ This document describes the implementation of Cardano blockchain integration for
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              USER INTERFACE                                  │
+┌────────────────────────────────────────────────────────────────────────────┐
+│                              USER INTERFACE                                │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
 │  │   CREATE    │  │   UPDATE    │  │   DELETE    │  │   STATUS    │        │
 │  │    Note     │  │    Note     │  │    Note     │  │   Badge     │        │
@@ -16,17 +16,17 @@ This document describes the implementation of Cardano blockchain integration for
 └─────────┼────────────────┼────────────────┼────────────────────────────────┘
           │                │                │
           ▼                ▼                ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           NOTES PAGE (page.tsx)                              │
+┌────────────────────────────────────────────────────────────────────────────┐
+│                           NOTES PAGE (page.tsx)                            │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
 │  │  1. Save to Database (immediate) ──► Fast UX for user                │  │
 │  │  2. Send to Blockchain (async) ──► If wallet connected               │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────────────┘
           │                                    │
           ▼                                    ▼
-┌─────────────────────┐          ┌─────────────────────────────────────────────┐
-│   LOCAL DATABASE    │          │         BLOCKCHAIN LAYER                    │
+┌─────────────────────┐          ┌────────────────────────────────────────────┐
+│   LOCAL DATABASE    │          │         BLOCKCHAIN LAYER                   │
 │   (PostgreSQL)      │          │  ┌─────────────────────────────────────┐   │
 │                     │          │  │   useBlockchainNotes Hook           │   │
 │  ┌───────────────┐  │          │  │   - sendNoteToBlockchain()          │   │
@@ -79,7 +79,7 @@ This document describes the implementation of Cardano blockchain integration for
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                         NOTE LIFECYCLE FLOW                                 │
+│                         NOTE LIFECYCLE FLOW                                │
 └────────────────────────────────────────────────────────────────────────────┘
 
 User Action          Database              Blockchain           Status
@@ -126,13 +126,24 @@ User Action          Database              Blockchain           Status
 
 ### Transaction Rules
 
-1. **On Create**: No blockchain transaction (note is empty)
-2. **On Save**: Transaction sent only if:
-   - Wallet is connected
-   - Note has actual content (not empty)
-   - No other transaction is in progress
+1. **Save Button**: Local save only - saves to database, NO blockchain transaction
+2. **Sync to Chain Button**: Explicit blockchain sync - only when user clicks this button
+   - Requires wallet to be connected
+   - Requires note to have content
+   - Saves locally first, then sends to blockchain
 3. **On Delete**: Transaction sent only if note was previously on chain (has txHash)
-4. **Concurrent Protection**: Second save/delete blocked while transaction is pending
+4. **Concurrent Protection**: Sync button disabled while transaction is pending
+
+### UI Buttons
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│  [Delete] [Save]  |  [Status Badge] [View TX]  [Sync to Chain]     │
+│     ↓       ↓                                        ↓             │
+│   Local   Local                               Blockchain TX        │
+│   Delete  Save                                (explicit only)      │
+└────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -283,7 +294,7 @@ If notes are lost from the database, users can recover them from the blockchain.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                      BLOCKCHAIN RECOVERY FLOW                             │
+│                      BLOCKCHAIN RECOVERY FLOW                            │
 └──────────────────────────────────────────────────────────────────────────┘
 
   User clicks                                              
