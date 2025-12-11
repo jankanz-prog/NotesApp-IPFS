@@ -16,3 +16,4 @@ SELECT id, email, username, createdAt FROM User;
 -- Delete all users (WARNING: Use with caution!)
 -- DELETE FROM User;
 
+

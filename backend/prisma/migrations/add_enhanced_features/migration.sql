@@ -38,3 +38,4 @@ ALTER TABLE `NoteTag` ADD CONSTRAINT `NoteTag_tagId_fkey` FOREIGN KEY (`tagId`) 
 -- Add index for isPinned
 CREATE INDEX `Note_isPinned_idx` ON `Note`(`isPinned`);
 
+
