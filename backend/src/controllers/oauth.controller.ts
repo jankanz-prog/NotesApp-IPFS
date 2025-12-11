@@ -52,7 +52,18 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
         });
       } else {
         // Create new user
-        const username = email.split('@')[0] + '_' + Math.random().toString(36).substring(7);
+        // Use Google name if available, otherwise fall back to email prefix
+        let username = name || email.split('@')[0];
+        
+        // Check if username already exists
+        const existingUsername = await prisma.user.findUnique({
+          where: { username },
+        });
+        
+        // If username exists, append a random suffix
+        if (existingUsername) {
+          username = username + '_' + Math.random().toString(36).substring(7);
+        }
         
         user = await prisma.user.create({
           data: {

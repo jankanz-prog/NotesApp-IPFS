@@ -34,6 +34,18 @@ const COLORS = [
 ];
 const IMPORTANCE_LEVELS = [1, 2, 3, 4, 5];
 
+// Helper function to get full image URL
+const getImageUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  // If it's already a full URL (http/https), return as is
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  // If it's a relative path, prepend the backend URL
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:4000';
+  return `${backendUrl}${url}`;
+};
+
 export default function NotesPage() {
   const router = useRouter();
   const { user, logout, initializeAuth, isInitialized } = useAuthStore();
@@ -401,7 +413,7 @@ export default function NotesPage() {
             >
               {user.profilePicture ? (
                 <img
-                  src={user.profilePicture}
+                  src={getImageUrl(user.profilePicture) || user.profilePicture}
                   alt={user.username}
                   className='w-8 h-8 rounded-full object-cover ring-2 ring-blue-400/30 group-hover:ring-blue-600 transition-all'
                 />
