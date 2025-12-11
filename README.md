@@ -23,7 +23,6 @@ Features include rich-text notes, drawing canvas, IPFS pinning, and Cardano wall
 - Prisma ORM
 - PostgreSQL or MySQL
 - JWT authentication / NextAuth optional
-- IPFS integration
 - Cardano wallet integration
 
 ---
@@ -38,11 +37,9 @@ Features include rich-text notes, drawing canvas, IPFS pinning, and Cardano wall
 
 ### **Notes System**
 - Rich-text editor: headings, bold, italics, font size, font types
-- Drawing canvas for sketches & diagrams
 - Mark a note as favorite
 - Set importance level (1–5)
-- Auto-save system
-- Export note to IPFS (saves IPFS hash)
+- Export note to Cardano blockchain (saves Transaction hash)
 - Metadata syncing for Cardano wallet users
 
 ### **User System**
@@ -55,13 +52,7 @@ Features include rich-text notes, drawing canvas, IPFS pinning, and Cardano wall
 - Read wallet info
 - Store addresses in DB
 - Optional note metadata push to chain
-- IPFS hash stored in transaction metadata
 
-### **IPFS Support**
-- Upload note content
-- Upload drawing canvas snapshots
-- Receive + store IPFS CID
-- Retrieve from gateway
 
 ---
 
@@ -170,10 +161,8 @@ npm run start
 ---
 
 ## 🧩 Roadmap
-- Offline mode (local IndexedDB cache)
 - End-to-end encryption for notes
 - Realtime sync
-- Cardano smart contract integration
 - Multi-tab notebook categories
 
 ---
