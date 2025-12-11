@@ -340,6 +340,43 @@ export const updateProfilePicture = async (req: Request, res: Response): Promise
   }
 };
 
+export const uploadProfilePicture = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).userId;
+    const file = req.file;
+
+    if (!file) {
+      res.status(400).json({ error: 'No file uploaded' });
+      return;
+    }
+
+    // Generate the URL for the uploaded file
+    const profilePictureUrl = `/uploads/profiles/${file.filename}`;
+
+    // Update user's profile picture
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { profilePicture: profilePictureUrl },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        profilePicture: true,
+        walletAddress: true,
+      },
+    });
+
+    res.json({ 
+      message: 'Profile picture uploaded successfully', 
+      user,
+      fileUrl: profilePictureUrl,
+    });
+  } catch (error) {
+    console.error('Upload profile picture error:', error);
+    res.status(500).json({ error: 'Failed to upload profile picture' });
+  }
+};
+
 export const linkWallet = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;

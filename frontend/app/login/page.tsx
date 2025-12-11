@@ -5,17 +5,19 @@ import { useRouter } from 'next/navigation';
 import { BookOpen, Eye, EyeOff, Lock, Mail, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
-import { GoogleLogin } from '@react-oauth/google';
+import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
+import api from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, user, isLoading: authLoading, initializeAuth } = useAuthStore();
+  const { login, user, isLoading: authLoading, initializeAuth, setUser } = useAuthStore();
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [googleError, setGoogleError] = useState('');
 
   useEffect(() => {
     initializeAuth();
@@ -48,9 +50,27 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleSuccess = async () => {
-    toast.success('Google login successful!');
-    router.push('/notes');
+  const handleGoogleSuccess = async (
+    credentialResponse: CredentialResponse
+  ) => {
+    try {
+      setGoogleError('');
+      const response = await api.post('/auth/google', {
+        credential: credentialResponse.credential,
+      });
+
+      if (response.data.token && response.data.user) {
+        localStorage.setItem('token', response.data.token);
+        setUser(response.data.user);
+        toast.success('Google login successful!');
+        router.push('/notes');
+      }
+    } catch (error: any) {
+      console.error('Google login error:', error);
+      const errorMsg = error.response?.data?.error || 'Failed to sign in with Google';
+      setGoogleError(errorMsg);
+      toast.error(errorMsg);
+    }
   };
 
   const handleGoogleError = () => {
@@ -79,9 +99,9 @@ export default function LoginPage() {
             <p className="text-purple-300/70 text-sm">Sign in to continue to your notes</p>
           </div>
 
-          {error && (
+          {(error || googleError) && (
             <div className="mx-8 mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <p className="text-red-400 text-sm text-center">{error}</p>
+              <p className="text-red-400 text-sm text-center">{error || googleError}</p>
             </div>
           )}
 
