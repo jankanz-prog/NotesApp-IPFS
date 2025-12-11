@@ -74,12 +74,47 @@ export const sendNoteTransaction = async (
     const metadata = new Map<bigint, any>();
     const metadatumMap = new Core.MetadatumMap();
 
-    // Helper function for 64-byte chunking
-    const formatContent = (content: string) => {
-      if (content.length <= 64) {
+    // Helper function for 64-byte chunking (UTF-8 byte limit, not character limit)
+    const formatContent = (content: string): any => {
+      // Convert string to UTF-8 bytes
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode(content);
+      
+      // If content fits in 64 bytes, return as single text
+      if (bytes.length <= 64) {
         return Core.Metadatum.newText(content);
       }
-      const chunks = content.match(/.{1,64}/g) || [];
+      
+      // Split into chunks of max 64 bytes each
+      const chunks: string[] = [];
+      let currentChunk: number[] = [];
+      let currentByteLength = 0;
+      
+      for (let i = 0; i < bytes.length; i++) {
+        const byte = bytes[i];
+        
+        // Check if adding this byte would exceed 64 bytes
+        if (currentByteLength + 1 > 64 && currentChunk.length > 0) {
+          // Decode current chunk and add to chunks array
+          const decoder = new TextDecoder('utf-8', { fatal: false });
+          chunks.push(decoder.decode(new Uint8Array(currentChunk)));
+          
+          // Start new chunk
+          currentChunk = [byte];
+          currentByteLength = 1;
+        } else {
+          currentChunk.push(byte);
+          currentByteLength++;
+        }
+      }
+      
+      // Add remaining chunk
+      if (currentChunk.length > 0) {
+        const decoder = new TextDecoder('utf-8', { fatal: false });
+        chunks.push(decoder.decode(new Uint8Array(currentChunk)));
+      }
+      
+      // Create list of text metadatum
       const list = new Core.MetadatumList();
       chunks.forEach(chunk => {
         list.add(Core.Metadatum.newText(chunk));

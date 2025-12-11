@@ -6,6 +6,7 @@ import {
   updateNote,
   deleteNote,
   toggleFavorite,
+  togglePin,
 } from '../controllers/notes.controller';
 import { authMiddleware } from '../middleware/auth';
 
@@ -20,5 +21,6 @@ router.get('/:id', getNoteById);
 router.put('/:id', updateNote);
 router.delete('/:id', deleteNote);
 router.patch('/:id/favorite', toggleFavorite);
+router.patch('/:id/pin', togglePin);
 
 export default router;

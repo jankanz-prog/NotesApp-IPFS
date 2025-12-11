@@ -1,159 +1,178 @@
-import Link from 'next/link';
-import { BookOpen, Lock, Wallet, Upload } from 'lucide-react';
-import Image from 'next/image' // ✅ correct
+'use client';
 
+import React, { useEffect, useState } from 'react';
+import { BookOpen, Lock, Upload, Wallet, ArrowRight, Menu, X } from 'lucide-react';
 
 export default function Home() {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({
+        x: (e.clientX / window.innerWidth - 0.5) * 15,
+        y: (e.clientY / window.innerHeight - 0.5) * 15,
+      });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  const features = [
+    {
+      icon: BookOpen,
+      title: 'Rich Text Editor',
+      description: 'Format your notes with headings, bold, italics, and custom fonts.',
+    },
+    {
+      icon: Lock,
+      title: 'Secure Storage',
+      description: 'Your notes are encrypted and stored securely in the database.',
+    },
+    {
+      icon: Upload,
+      title: 'IPFS Integration',
+      description: 'Export your notes to IPFS for decentralized, permanent storage.',
+    },
+    {
+      icon: Wallet,
+      title: 'Cardano Wallet',
+      description: 'Connect your Cardano wallet and store metadata on the blockchain.',
+    },
+  ];
+
   return (
-    <div className='min-h-screen relative bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-x-hidden'>
-      {/* Soft Animated Gradient Layer */}
-      <div
-        className='absolute inset-0 -z-20 bg-cover bg-center bg-no-repeat'
-        style={{ backgroundImage: "url('')" }} // put your image in public/images/
-      ></div>
-      <div className='absolute inset-0 bg-gradient-to-tr from-blue-200 via-purple-200 to-pink-200 opacity-40 blur-2xl bg-[length:300%_300%] animate-gradient -z-10'></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-purple-500/10">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <a href="/" className="flex items-center gap-2 group">
+              <div className="relative">
+                <div className="absolute inset-0 bg-purple-600 rounded-lg blur-md opacity-50 group-hover:opacity-75 transition-opacity" />
+                <BookOpen className="w-7 h-7 text-purple-400 relative z-10" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                NotesChain
+              </span>
+            </a>
 
-      {/* Floating Aura Lights */}
-      <div className='absolute inset-0 pointer-events-none'>
-        <div className='absolute top-12 left-20 w-96 h-96 bg-blue-300/40 rounded-full blur-3xl animate-floatSlow'></div>
-        <div className='absolute bottom-20 right-24 w-80 h-80 bg-pink-300/30 rounded-full blur-2xl animate-floatSlow delay-500'></div>
-        <div className='absolute top-1/2 left-1/2 -translate-x-1/2 w-96 h-96 bg-purple-300/20 rounded-full blur-[120px] animate-floatSlow delay-1000'></div>
-      </div>
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-3">
+              <a
+                href="/login"
+                className="px-5 py-2 text-purple-200 hover:text-white transition-colors font-medium"
+              >
+                Login
+              </a>
+              <a
+                href="/register"
+                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-lg transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 font-semibold"
+              >
+                Get Started
+              </a>
+            </div>
 
-      {/* Glow Rings */}
-      <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-        <div className='absolute w-[600px] h-[600px] border border-white/10 rounded-full left-[-200px] top-[200px] animate-spinSlow'></div>
-        <div className='absolute w-[400px] h-[400px] border border-white/10 rounded-full right-[-150px] top-[300px] animate-spinSlowReverse'></div>
-      </div>
-
-      {/* Floating Sparkles */}
-      <div className='absolute inset-0 pointer-events-none'>
-        <div className='absolute w-2 h-2 bg-white/70 rounded-full blur-sm top-32 left-1/4 animate-twinkle'></div>
-        <div className='absolute w-2 h-2 bg-white/70 rounded-full blur-sm top-1/3 right-20 animate-twinkle delay-300'></div>
-        <div className='absolute w-2 h-2 bg-white/70 rounded-full blur-sm bottom-40 left-40 animate-twinkle delay-700'></div>
-        <div className='absolute w-2 h-2 bg-white/70 rounded-full blur-sm bottom-20 right-1/3 animate-twinkle delay-1000'></div>
-      </div>
-
-      {/* Glassmorphism Grid */}
-      <div className='absolute inset-0 pointer-events-none opacity-[0.06]'>
-        <div className='absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.1)_1px,transparent_1px),linear-gradient(rgba(0,0,0,0.1)_1px,transparent_1px)] bg-[size:50px_50px]'></div>
-      </div>
-
-      {/* MAIN CONTENT */}
-      <div className='container mx-auto px-4 py-16 relative z-10'>
-        {/* Navbar */}
-        <nav className='flex justify-between items-center mb-20'>
-          <div className='flex items-center gap-2 animate-bounceSlow'>
-            <Image
-              src='/images/batibot_logo-removebg-preview.png' // Make sure this file exists in public/images/logo.png
-              alt='Notes App Logo'
-              width={100}
-              height={100}
-              className='object-contain'
-            />
-            <span className='text-3xl font-bold text-gray-900'>Notes App</span>
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden text-purple-200 hover:text-white transition-colors"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
 
-          <div className='flex gap-4'>
-            <Link
-              href='/login'
-              className='px-6 py-2 text-gray-700 hover:text-blue-600 transition'
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="md:hidden py-4 space-y-3 border-t border-purple-500/10">
+              <a
+                href="/login"
+                className="block px-4 py-2 text-purple-200 hover:text-white hover:bg-purple-500/10 rounded-lg transition-colors font-medium"
+              >
+                Login
+              </a>
+              <a
+                href="/register"
+                className="block px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg text-center font-semibold"
+              >
+                Get Started
+              </a>
+            </div>
+          )}
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 min-h-[80vh] flex items-center">
+        <div className="container mx-auto max-w-6xl w-full">
+          <div
+            className="text-center transition-transform duration-100 ease-out"
+            style={{
+              transform: `translate(${mousePosition.x * 0.05}px, ${mousePosition.y * 0.05}px)`,
+            }}
+          >
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 sm:mb-8 leading-tight">
+              <span className="block bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+                Your Notes,
+              </span>
+              <span className="block bg-gradient-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                Decentralized
+              </span>
+            </h1>
+            <p className="text-base sm:text-lg md:text-xl text-purple-200 mb-8 sm:mb-10 max-w-2xl mx-auto leading-relaxed">
+              A modern note-taking app with IPFS storage and Cardano wallet integration.
+              Keep your thoughts secure and accessible anywhere.
+            </p>
+            <a
+              href="/register"
+              className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-base sm:text-lg rounded-xl transition-all duration-300 shadow-2xl shadow-purple-500/25 hover:shadow-purple-500/50 font-semibold group"
             >
-              Login
-            </Link>
-            <Link
-              href='/register'
-              className='px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-xl transition'
-            >
-              Get Started
-            </Link>
+              Start Writing
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </a>
           </div>
-        </nav>
-
-        {/* Hero Section */}
-        <div className='max-w-4xl mx-auto text-center mt-20'>
-          <h1
-            className='
-    text-7xl font-extrabold mb-8
-    bg-gradient-to-r from-blue-500 via-purple-600 to-pink-600
-    bg-clip-text text-transparent
-    animate-gradientMove animate-floatPulse
-    drop-shadow-[0_0_25px_rgba(99,102,241,0.4)]
-  '
-          >
-            Your Notes, Decentralized
-          </h1>
-
-          <p className='text-xl text-gray-600 mb-12 animate-fade-in delay-200'>
-            A modern note-taking app with IPFS storage and Cardano wallet
-            integration. Keep your thoughts secure and accessible anywhere.
-          </p>
-          <Link
-            href='/register'
-            className='inline-block px-8 py-4 bg-blue-600 text-white text-lg rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg hover:shadow-2xl animate-bounce'
-          >
-            Start Writing
-          </Link>
         </div>
 
-        {/* Features Section */}
-        <div className='mt-28'>
-          <h2 className='text-2xl font-semibold text-center mb-12 text-gray-900 animate-fadeIn delay-300'>
+        {/* Decorative Background Elements */}
+        <div className="absolute top-1/4 left-10 w-72 h-72 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-10 w-96 h-96 bg-pink-600/10 rounded-full blur-3xl pointer-events-none" />
+      </section>
+
+      {/* Features Section */}
+      <section className="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-slate-950/50">
+        <div className="container mx-auto max-w-6xl">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 sm:mb-16 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
             Features
           </h2>
-
-          <div className='flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide'>
-            {[
-              {
-                icon: <BookOpen className='w-6 h-6 text-blue-600' />,
-                title: 'Rich Text Editor',
-                desc: 'Format your notes with styles and headings.',
-                bg: 'bg-blue-100',
-              },
-              {
-                icon: <Lock className='w-6 h-6 text-purple-600' />,
-                title: 'Secure Storage',
-                desc: 'Encrypted note storage for your privacy.',
-                bg: 'bg-purple-100',
-              },
-              {
-                icon: <Upload className='w-6 h-6 text-green-600' />,
-                title: 'IPFS Integration',
-                desc: 'Store notes permanently on IPFS.',
-                bg: 'bg-green-100',
-              },
-              {
-                icon: <Wallet className='w-6 h-6 text-orange-600' />,
-                title: 'Cardano Wallet',
-                desc: 'Connect wallets & save metadata.',
-                bg: 'bg-orange-100',
-              },
-            ].map((f, i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {features.map((feature, index) => (
               <div
-                key={i}
-                className='min-w-[280px] p-6 bg-white rounded-xl shadow-md snap-center hover:scale-105 hover:shadow-xl transition animate-float'
-                style={{ animationDelay: `${i * 200}ms` }}
+                key={index}
+                className="group bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/10 hover:border-purple-500/30 transition-all duration-300 hover:-translate-y-2"
               >
-                <div
-                  className={`w-12 h-12 ${f.bg} rounded-lg flex items-center justify-center mb-4`}
-                >
-                  {f.icon}
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <feature.icon className="w-6 h-6 text-white" />
                 </div>
-                <h3 className='text-xl font-semibold text-gray-900'>
-                  {f.title}
+                <h3 className="text-lg sm:text-xl font-semibold mb-2 text-purple-100 group-hover:text-white transition-colors">
+                  {feature.title}
                 </h3>
-                <p className='text-gray-600'>{f.desc}</p>
+                <p className="text-purple-300/70 text-sm leading-relaxed">
+                  {feature.description}
+                </p>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Footer */}
-      <footer className='container mx-auto px-4 py-8 mt-20 border-t'>
-        <p className='text-center text-gray-600'>
-          © 2025 Notes App. Built with Next.js, Express, and Prisma.
-        </p>
+      <footer className="relative py-8 px-4 sm:px-6 lg:px-8 border-t border-purple-500/10">
+        <div className="container mx-auto max-w-6xl text-center">
+          <p className="text-purple-300/60 text-sm">
+            © 2025 NotesChain. Built with Next.js, Express, and Prisma.
+          </p>
+        </div>
       </footer>
     </div>
   );

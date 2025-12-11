@@ -7,6 +7,7 @@ interface User {
   username: string;
   profilePicture?: string;
   walletAddress?: string;
+  provider?: 'local' | 'google';
 }
 
 interface AuthState {

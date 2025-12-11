@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { X, ExternalLink, User, Clock, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw } from 'lucide-react';
 import { useWalletStore } from '@/store/walletStore';
 import api from '@/lib/api';
@@ -37,24 +36,6 @@ export default function TransactionHistory({ isOpen, onClose }: TransactionHisto
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryingTx, setRetryingTx] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -157,122 +138,128 @@ export default function TransactionHistory({ isOpen, onClose }: TransactionHisto
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'CONFIRMED':
-        return 'bg-green-100 text-green-700';
+        return 'bg-green-500/20 text-green-300 border border-green-500/30';
       case 'SUBMITTED':
-        return 'bg-yellow-100 text-yellow-700';
+        return 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30';
       case 'FAILED':
-        return 'bg-red-100 text-red-700';
+        return 'bg-red-500/20 text-red-300 border border-red-500/30';
       default:
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-purple-500/20 text-purple-300 border border-purple-500/30';
     }
   };
 
-  if (!isOpen || !mounted) return null;
+  if (!isOpen) return null;
 
-  const modalContent = (
-    <div 
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in"
-      onClick={onClose}
-      style={{ margin: 0 }}
-    >
-      <div 
-        className="glass rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col animate-scale-in"
-        onClick={(e) => e.stopPropagation()}
-      >
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+      <div className="glass-dark rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col border border-purple-500/30 animate-in zoom-in-95 duration-200 my-auto">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-          <h2 className="text-xl font-bold text-gray-900">Transaction History</h2>
+        <div className="px-6 py-4 border-b border-purple-500/20 flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-purple-600/10 to-pink-600/10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-purple-400" />
+            </div>
+            <h2 className="text-xl font-bold text-purple-100">Transaction History</h2>
+          </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-lg transition"
+            className="p-1.5 hover:bg-purple-500/20 rounded-lg transition-colors"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-purple-300" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
+            <div className="flex flex-col items-center justify-center py-16">
+              <Loader2 className="w-10 h-10 text-purple-400 animate-spin mb-3" />
+              <p className="text-purple-300/60 text-sm">Loading transactions...</p>
             </div>
           ) : error ? (
-            <div className="p-6 text-center">
-              <p className="text-red-600">{error}</p>
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+                <X className="w-8 h-8 text-red-400" />
+              </div>
+              <p className="text-red-400 mb-3">{error}</p>
               <button
                 onClick={fetchTransactions}
-                className="mt-2 text-blue-600 hover:underline text-sm"
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors text-sm font-medium"
               >
                 Try again
               </button>
             </div>
           ) : transactions.length === 0 ? (
-            <div className="p-12 text-center">
-              <ArrowUpRight className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">No transactions yet</p>
-              <p className="text-sm text-gray-400 mt-1">
+            <div className="p-16 text-center">
+              <div className="w-20 h-20 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-4">
+                <ArrowUpRight className="w-10 h-10 text-purple-400/50" />
+              </div>
+              <p className="text-purple-200 font-medium mb-1">No transactions yet</p>
+              <p className="text-sm text-purple-300/60">
                 Your transactions will appear here
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-purple-500/10">
               {transactions.map((tx) => (
-                <div key={tx.id} className="p-4 hover:bg-gray-50 transition">
-                  <div className="flex items-start justify-between">
+                <div key={tx.id} className="p-5 hover:bg-purple-500/5 transition-colors">
+                  <div className="flex items-start justify-between gap-4">
                     {/* Counterparty Info */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       {/* Type indicator */}
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        tx.type === 'sent' ? 'bg-red-100' : 'bg-green-100'
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        tx.type === 'sent' 
+                          ? 'bg-red-500/20 border border-red-500/30' 
+                          : 'bg-green-500/20 border border-green-500/30'
                       }`}>
                         {tx.counterparty.profilePicture ? (
                           <img
                             src={tx.counterparty.profilePicture}
                             alt={tx.counterparty.username || 'User'}
-                            className="w-10 h-10 rounded-full object-cover"
+                            className="w-12 h-12 rounded-xl object-cover"
                           />
                         ) : tx.type === 'sent' ? (
-                          <ArrowUpRight className="w-5 h-5 text-red-600" />
+                          <ArrowUpRight className="w-6 h-6 text-red-400" />
                         ) : (
-                          <ArrowDownLeft className="w-5 h-5 text-green-600" />
+                          <ArrowDownLeft className="w-6 h-6 text-green-400" />
                         )}
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${
                             tx.type === 'sent' 
-                              ? 'bg-red-100 text-red-700' 
-                              : 'bg-green-100 text-green-700'
+                              ? 'bg-red-500/20 text-red-300 border border-red-500/30' 
+                              : 'bg-green-500/20 text-green-300 border border-green-500/30'
                           }`}>
                             {tx.type === 'sent' ? 'Sent to' : 'Received from'}
                           </span>
-                          <span className="font-medium text-gray-900">
+                          <span className="font-semibold text-purple-100">
                             {tx.counterparty.isRegistered
                               ? tx.counterparty.username
                               : 'Unknown User'}
                           </span>
                           {tx.counterparty.isRegistered && (
-                            <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                            <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-lg border border-blue-500/30">
                               Registered
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-500 font-mono">
+                        <p className="text-xs text-purple-300/60 font-mono truncate">
                           {formatAddress(tx.counterparty.walletAddress)}
                         </p>
                       </div>
                     </div>
 
                     {/* Amount */}
-                    <div className="text-right">
-                      <p className={`font-bold ${
-                        tx.type === 'sent' ? 'text-red-600' : 'text-green-600'
+                    <div className="text-right flex-shrink-0">
+                      <p className={`text-xl font-bold mb-2 ${
+                        tx.type === 'sent' ? 'text-red-400' : 'text-green-400'
                       }`}>
-                        {tx.type === 'sent' ? '-' : '+'}{tx.amount.toFixed(2)} ₳
+                        {tx.type === 'sent' ? '-' : '+'}{tx.amount.toFixed(2)} <span className="text-base">₳</span>
                       </p>
-                      <div className="flex items-center gap-2 justify-end mt-1">
+                      <div className="flex items-center gap-2 justify-end flex-wrap">
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(
+                          className={`text-xs px-2.5 py-1 rounded-lg font-semibold ${getStatusColor(
                             tx.status
                           )}`}
                         >
@@ -283,7 +270,7 @@ export default function TransactionHistory({ isOpen, onClose }: TransactionHisto
                           <button
                             onClick={() => handleRetry(tx)}
                             disabled={retryingTx === tx.id}
-                            className="flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full hover:bg-orange-200 transition disabled:opacity-50"
+                            className="flex items-center gap-1 text-xs px-2.5 py-1 bg-orange-500/20 text-orange-300 rounded-lg hover:bg-orange-500/30 transition-colors disabled:opacity-50 border border-orange-500/30 font-medium"
                           >
                             {retryingTx === tx.id ? (
                               <Loader2 className="w-3 h-3 animate-spin" />
@@ -298,19 +285,19 @@ export default function TransactionHistory({ isOpen, onClose }: TransactionHisto
                   </div>
 
                   {/* Transaction Details */}
-                  <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
+                  <div className="mt-4 pt-3 border-t border-purple-500/10 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 text-purple-300/60">
+                      <Clock className="w-3.5 h-3.5" />
                       <span>{formatDate(tx.createdAt)}</span>
                     </div>
                     <a
                       href={`https://preview.cardanoscan.io/transaction/${tx.txHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-blue-600 hover:underline"
+                      className="flex items-center gap-1.5 text-purple-400 hover:text-purple-300 transition-colors font-medium"
                     >
                       <span className="font-mono">{tx.txHash.slice(0, 16)}...</span>
-                      <ExternalLink className="w-3 h-3" />
+                      <ExternalLink className="w-3.5 h-3.5" />
                     </a>
                   </div>
                 </div>
@@ -320,14 +307,20 @@ export default function TransactionHistory({ isOpen, onClose }: TransactionHisto
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0">
-          <p className="text-xs text-gray-500 text-center">
-            Showing all transactions on Preview Network
+        <div className="px-6 py-4 border-t border-purple-500/20 bg-slate-950/50 flex-shrink-0 flex items-center justify-between">
+          <p className="text-xs text-purple-300/60">
+            Showing all transactions on <span className="font-semibold text-yellow-400">Preview Network</span>
           </p>
+          <button
+            onClick={fetchTransactions}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 rounded-lg transition-colors text-xs font-medium border border-purple-500/30 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
         </div>
       </div>
     </div>
   );
-
-  return createPortal(modalContent, document.body);
 }

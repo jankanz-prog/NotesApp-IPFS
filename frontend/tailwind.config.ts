@@ -9,12 +9,28 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Vivid Nightfall Palette
+        'nightfall-darkest': '#10002b',
+        'nightfall-dark': '#240046',
+        'nightfall-accent-dark': '#3c096c',
+        'nightfall-accent': '#5a189a',
+        'royal-violet': '#7b2cbf',
+        'lavender-purple': '#9d4edd',
+        'mauve-magic': '#c77dff',
+        'mauve': '#e0aaff',
+        
+        // Legacy colors (for compatibility)
         'almond-cream': '#ede0d4',
         'desert-sand': '#e6ccb2',
         'tan': '#ddb892',
         'faded-copper': '#b08968',
         'coffee-bean': '#7f5539',
         'toffee-brown': '#9c6644',
+      },
+      backgroundImage: {
+        'gradient-nightfall': 'linear-gradient(135deg, #10002b 0%, #240046 50%, #10002b 100%)',
+        'gradient-purple': 'linear-gradient(135deg, #7b2cbf 0%, #9d4edd 50%, #c77dff 100%)',
+        'gradient-purple-pink': 'linear-gradient(135deg, #7b2cbf 0%, #9d4edd 50%, #c77dff 100%)',
       },
       animation: {
         'fade-in': 'fadeIn 0.6s ease-out',
@@ -29,6 +45,7 @@ const config: Config = {
         'pulse-slow': 'pulse 3s ease-in-out infinite',
         'float': 'float 3s ease-in-out infinite',
         'gradient': 'gradient 8s ease infinite',
+        'gradient-shift': 'gradient-shift 20s ease infinite',
         'shimmer': 'shimmer 2s linear infinite',
         'draw': 'draw 1s ease-out forwards',
         'counter': 'counter 2s ease-out forwards',
@@ -84,6 +101,10 @@ const config: Config = {
           '0%, 100%': { backgroundPosition: '0% 50%' },
           '50%': { backgroundPosition: '100% 50%' },
         },
+        'gradient-shift': {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+        },
         shimmer: {
           '0%': { backgroundPosition: '-1000px 0' },
           '100%': { backgroundPosition: '1000px 0' },
@@ -111,5 +132,3 @@ const config: Config = {
 };
 
 export default config;
-
-
