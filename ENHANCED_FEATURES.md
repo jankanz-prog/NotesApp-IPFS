@@ -208,3 +208,4 @@ mysql -u your_user -p your_database < prisma/migrations/add_enhanced_features/mi
 Enjoy your enhanced note-taking experience! 🎉
 
 
+
